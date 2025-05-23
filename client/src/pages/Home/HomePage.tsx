@@ -9,7 +9,7 @@ const HomePage: React.FC = () => {
         <Box sx={{ py: 4 }}>
           <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom>
-              Добро пожаловать в StudLink
+              Добро пожаловать в StudLink!
             </Typography>
             <Typography variant="body1" paragraph>
               StudLink - это платформа для онлайн-обучения, которая помогает студентам и преподавателям

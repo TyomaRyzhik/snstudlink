@@ -5,9 +5,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 
 const typewriterPhrases = [
   'Добро пожаловать в StudLink!',
-  'Общайся, делись, учись.',
+  'Общайся, делись, учись!',
   'Присоединяйся к студенческому сообществу!',
-  'Создавай посты и находи друзей.'
+  'Создавай посты и находи друзей!',
+  'Стань частью нашего сообщества!'
 ]
 
 const TypewriterAnimatedText = () => {
@@ -147,7 +148,7 @@ const Auth = () => {
         },
       }}>
         <Typography variant="h2" sx={{ fontWeight: 700, fontSize: 80, mb: 2 }}>
-          {'<'}SL{'>'}
+          {'<'}/SL{'>'}
         </Typography>
         <Typography variant="h5" sx={{ opacity: 0.9 }}>StudLink</Typography>
       </Box>

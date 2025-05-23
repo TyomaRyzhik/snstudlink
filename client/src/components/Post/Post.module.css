@@ -438,27 +438,71 @@
   border-radius: 8px;
 }
 
-:global(.MuiOutlinedInput-root input) {
+/* Стили для полей авторизации */
+:global(.loginForm .MuiOutlinedInput-root input),
+:global(.loginForm .MuiOutlinedInput-input) {
+  background: #e6edff !important;
+  color: #222 !important;
+}
+:global(.loginForm .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline) {
+  border-color: #7da6fa !important;
+}
+:global(.loginForm .MuiInputLabel-root) {
+  color: #7da6fa !important;
+}
+:global(.loginForm .MuiInputLabel-root.Mui-focused) {
+  color: #1d9bf0 !important;
+}
+
+/* Стили для полей опроса */
+:global(.pollContainer .MuiOutlinedInput-root),
+:global(.pollContainer .MuiOutlinedInput-root input),
+:global(.pollContainer .MuiOutlinedInput-input) {
+  background: #fff !important;
+  color: #222 !important;
+}
+:global(.pollContainer .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline) {
+  border-color: #fff !important;
+}
+:global(.pollContainer .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-color: #1d9bf0 !important;
+}
+:global(.pollContainer .MuiInputLabel-root) {
   color: #fff !important;
 }
-:global(.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline) {
-  border-color: #fff !important;
+:global(.pollContainer .MuiInputLabel-root.Mui-focused) {
+  color: #1d9bf0 !important;
+}
+
+:global(.MuiOutlinedInput-root),
+:global(.MuiOutlinedInput-root input),
+:global(.MuiOutlinedInput-input) {
+  /* background: #fff !important; */
+  color: #222 !important;
+  border-radius: 6px !important;
+  font-size: 16px;
+}
+
+:global(.MuiOutlinedInput-notchedOutline) {
+  border-color: #b3c6f7 !important;
   transition: border-color 0.2s;
 }
+
 :global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
   border-color: #1d9bf0 !important;
 }
-:global(.MuiOutlinedInput-root input::placeholder) {
-  color: #fff !important;
-  opacity: 1 !important;
-}
 
-:global(.MuiOutlinedInput-root ~ .MuiInputLabel-root),
 :global(.MuiInputLabel-root) {
-  color: #fff !important;
+  color: #7da6fa !important;
+  font-weight: 500;
 }
 
-:global(.MuiOutlinedInput-root.Mui-focused ~ .MuiInputLabel-root),
 :global(.MuiInputLabel-root.Mui-focused) {
   color: #1d9bf0 !important;
+}
+
+:global(.MuiOutlinedInput-root input::placeholder),
+:global(.MuiOutlinedInput-input::placeholder) {
+  color: #b3c6f7 !important;
+  opacity: 1 !important;
 } 
