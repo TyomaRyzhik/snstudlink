@@ -33,7 +33,7 @@ interface User {
   id: string
   name: string
   nickname: string
-  group: string
+  user_group: string
   about: string
   avatar: string
   banner: string
@@ -84,7 +84,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAbout, setEditAbout] = useState('');
-  const [editGroup, setEditGroup] = useState('');
+  const [editUserGroup, setEditUserGroup] = useState('');
   const [editAvatar, setEditAvatar] = useState<File | null>(null);
   const [editBanner, setEditBanner] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,10 +93,10 @@ const Profile = ({ isMe = false }: ProfileProps) => {
   const userQueryKey = isMe ? ['user', 'me'] : ['user', id];
   const userQueryFn = async () => {
     if (isMe) {
-      const { data } = await axios.get('/api/users/me');
+      const { data } = await axios.get(`${API_URL}/api/users/me`);
       return data;
     } else {
-      const { data } = await axios.get(`/api/users/${id}`);
+      const { data } = await axios.get(`${API_URL}/api/users/${id}`);
       return data;
     }
   };
@@ -112,17 +112,17 @@ const Profile = ({ isMe = false }: ProfileProps) => {
     if (user) {
       setEditName(user.name || '');
       setEditAbout(user.about || '');
-      setEditGroup(user.group || '');
+      setEditUserGroup(user.user_group || '');
     }
   }, [user]);
 
   const postsQueryKey = isMe ? ['posts', 'user', 'me'] : ['posts', 'user', id];
   const postsQueryFn = async () => {
     if (isMe) {
-      const { data } = await axios.get('/api/posts/user/me');
+      const { data } = await axios.get(`${API_URL}/api/posts/user/me`);
       return data;
     } else {
-      const { data } = await axios.get(`/api/posts/user/${id}`);
+      const { data } = await axios.get(`${API_URL}/api/posts/user/${id}`);
       return data;
     }
   };
@@ -195,7 +195,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
       const formData = new FormData();
       formData.append('name', editName);
       formData.append('about', editAbout);
-      formData.append('group', editGroup);
+      formData.append('user_group', editUserGroup);
       
       if (editAvatar) {
         formData.append('avatar', editAvatar);
@@ -350,7 +350,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
             )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, color: '#8899a6', fontSize: 15, mb: 1 }}>
               <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#8899a6' }}>
-                <span style={{ fontSize: 18, verticalAlign: 'middle' }}>🎓</span> {user.group}
+                <span style={{ fontSize: 18, verticalAlign: 'middle' }}>🎓</span> {user.user_group}
               </Typography>
             </Box>
             {/* Статистика */}
@@ -457,7 +457,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField label="Имя" value={editName} onChange={e => setEditName(e.target.value)} fullWidth />
             <TextField label="О себе" value={editAbout} onChange={e => setEditAbout(e.target.value)} fullWidth multiline rows={3} />
-            <TextField label="Группа" value={editGroup} onChange={e => setEditGroup(e.target.value)} fullWidth />
+            <TextField label="Группа" value={editUserGroup} onChange={e => setEditUserGroup(e.target.value)} fullWidth />
             <Box>
               <Typography variant="subtitle2">Аватар</Typography>
               <input type="file" accept="image/*" onChange={e => setEditAvatar(e.target.files?.[0] || null)} />

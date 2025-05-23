@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNotification } from './NotificationContext';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 interface User {
   id: string;
@@ -14,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (name: string, nickname: string, email: string, password: string) => Promise<User>;
+  register: (name: string, nickname: string, email: string, password: string, user_group: string) => Promise<User>;
   logout: () => Promise<void>;
   updateProfile: (data: {
     name?: string;
@@ -25,7 +26,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const API_URL = 'http://localhost:3001/api';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkAuth = async () => {
     try {
-      const response = await axios.get(`${API_URL}/auth/verify`, {
+      const response = await axios.get(`${API_URL}/api/auth/verify`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,13 +92,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, nickname: string, email: string, password: string): Promise<User> => {
+  const register = async (name: string, nickname: string, email: string, password: string, user_group: string): Promise<User> => {
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, {
+      const response = await axios.post(`${API_URL}/api/auth/register`, {
         name,
         nickname,
         email,
         password,
+        user_group,
       });
       if (!response.data.success) {
         throw new Error(response.data.message || 'Registration failed');
@@ -126,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     newPassword?: string;
   }): Promise<void> => {
     try {
-      const response = await axios.put(`${API_URL}/auth/update-profile`, data, {
+      const response = await axios.put(`${API_URL}/api/auth/update-profile`, data, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

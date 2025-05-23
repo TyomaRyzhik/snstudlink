@@ -13,6 +13,7 @@ import { CourseParticipant } from './entities/CourseParticipant'
 import { Lecture } from './entities/Lecture'
 import { Assignment } from './entities/Assignment'
 import { ChecklistItem } from './entities/ChecklistItem'
+import { Role } from './entities/Role'
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -21,7 +22,7 @@ export const AppDataSource = new DataSource({
   username: 'studlink',
   password: 'studlink_password',
   database: 'studlink_db',
-  synchronize: true,
+  synchronize: false,
   logging: false,
   entities: [
     User,
@@ -37,7 +38,8 @@ export const AppDataSource = new DataSource({
     CourseParticipant,
     Lecture,
     Assignment,
-    ChecklistItem
+    ChecklistItem,
+    Role
   ],
   subscribers: [],
   migrations: [],

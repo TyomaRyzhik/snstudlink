@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
 import { verify } from 'jsonwebtoken'
-import { User } from '../entities/User'
-import { AppDataSource } from '../data-source'
+import { UserRepository } from '../db/repositories/user.repository'
 
 declare module 'express-serve-static-core' {
   interface Request {
-    user?: User
+    user?: any
   }
 }
 
@@ -24,8 +23,8 @@ export const authenticateToken = async (
     }
 
     const decoded = verify(token, process.env.JWT_SECRET || 'your-secret-key') as { id: string }
-    const userRepository = AppDataSource.getRepository(User)
-    const user = await userRepository.findOne({ where: { id: decoded.id } })
+    const userRepository = new UserRepository()
+    const user = await userRepository.findById(decoded.id)
 
     if (!user) {
       res.status(403).json({ message: 'User not found' })

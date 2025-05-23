@@ -7,6 +7,8 @@ import {
   OneToMany,
   ManyToMany,
   JoinTable,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm'
 import { Post } from './Post'
 import { Comment } from './Comment'
@@ -15,8 +17,9 @@ import { List } from './List'
 import { Message } from './Message'
 import { CourseParticipant } from './CourseParticipant'
 import { ChecklistItem } from './ChecklistItem'
+import { Role } from './Role'
 
-@Entity()
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string
@@ -34,7 +37,7 @@ export class User {
   password: string
 
   @Column()
-  group: string
+  user_group: string
 
   @Column({ nullable: true })
   about: string
@@ -44,6 +47,13 @@ export class User {
 
   @Column({ nullable: true })
   banner: string
+
+  @ManyToOne(() => Role)
+  @JoinColumn({ name: 'role_id' })
+  role: Role
+
+  @Column({ nullable: true })
+  role_id: number
 
   @OneToMany(() => Post, (post) => post.author)
   posts: Post[]

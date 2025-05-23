@@ -1,26 +1,34 @@
 import { Router, Request, Response } from 'express'
 import { hash, compare } from 'bcryptjs'
 import { sign } from 'jsonwebtoken'
-import { AppDataSource } from '../data-source'
-import { User } from '../entities/User'
+import { UserRepository } from '../db/repositories/user.repository'
 import { authenticateToken } from '../middleware/auth'
 
 const router = Router()
-const userRepository = AppDataSource.getRepository(User)
+const userRepository = new UserRepository()
 
 // Register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, nickname, group, about } = req.body
+    const { name, nickname, email, password, user_group } = req.body
+
+    // Логируем входящие данные для отладки
+    console.log('Регистрация:', { name, nickname, email, user_group });
 
     // Check if user exists
-    const existingUser = await userRepository.findOne({
-      where: [{ email }, { nickname }],
-    })
-
+    const existingUser = await userRepository.findByEmail(email)
     if (existingUser) {
       res.status(400).json({
-        message: 'User with this email or nickname already exists',
+        message: 'User with this email already exists',
+      })
+      return
+    }
+
+    // Check if nickname is taken
+    const existingNickname = await userRepository.findByNickname(nickname)
+    if (existingNickname) {
+      res.status(400).json({
+        message: 'This nickname is already taken',
       })
       return
     }
@@ -29,16 +37,13 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     const hashedPassword = await hash(password, 12)
 
     // Create user
-    const user = userRepository.create({
+    const user = await userRepository.create({
       name,
+      nickname,
       email,
       password: hashedPassword,
-      nickname,
-      group,
-      about,
+      user_group,
     })
-
-    await userRepository.save(user)
 
     // Generate token
     const token = sign(
@@ -55,15 +60,14 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
         nickname: user.nickname,
-        group: user.group,
-        about: user.about,
+        email: user.email,
+        user_group: user.user_group,
       },
     })
   } catch (error) {
     console.error('Registration error:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    res.status(500).json({ message: 'Internal server error', error: error.toString() })
   }
 })
 
@@ -73,10 +77,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body
 
     // Find user
-    const user = await userRepository.findOne({
-      where: { email },
-    })
-
+    const user = await userRepository.findByEmail(email)
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' })
       return
@@ -84,7 +85,6 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     // Check password
     const isValidPassword = await compare(password, user.password)
-
     if (!isValidPassword) {
       res.status(401).json({ message: 'Invalid credentials' })
       return
@@ -105,25 +105,24 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
         nickname: user.nickname,
-        group: user.group,
-        about: user.about,
+        email: user.email,
+        user_group: user.user_group,
       },
     })
   } catch (error) {
     console.error('Login error:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    res.status(500).json({ message: 'Internal server error', error: error.toString() })
   }
 })
 
 // Verify token and return user
 router.get('/verify', authenticateToken, (req: Request, res: Response): void => {
   if (!req.user) {
-    res.status(401).json({ message: 'Unauthorized' });
-    return;
+    res.status(401).json({ message: 'Unauthorized' })
+    return
   }
-  res.json({ user: req.user });
-});
+  res.json({ user: req.user })
+})
 
 export const authRouter = router 

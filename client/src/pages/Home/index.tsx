@@ -38,7 +38,7 @@ const Home = () => {
     queryKey: ['posts'],
     queryFn: async () => {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/posts/all`, {
+      const response = await fetch(`${API_URL}/api/posts/feed`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -47,7 +47,22 @@ const Home = () => {
       if (!response.ok) {
         throw new Error('Failed to fetch posts')
       }
-      return response.json()
+      const data = await response.json();
+      // Преобразуем все поля в camelCase
+      function toCamelCase(obj: any): any {
+        if (Array.isArray(obj)) {
+          return obj.map(v => toCamelCase(v));
+        } else if (obj !== null && typeof obj === 'object') {
+          return Object.fromEntries(
+            Object.entries(obj).map(([k, v]) => [
+              k.replace(/_([a-z])/g, g => g[1].toUpperCase()),
+              toCamelCase(v)
+            ])
+          );
+        }
+        return obj;
+      }
+      return toCamelCase(data);
     },
   })
 

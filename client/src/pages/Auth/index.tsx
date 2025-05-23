@@ -81,11 +81,11 @@ const TypewriterAnimatedText = () => {
 const Auth = () => {
   const { login, register, user, loading } = useAuth()
   const [form, setForm] = useState({
-    username: '',
+    name: '',
     email: '',
     password: '',
     nickname: '',
-    group: '',
+    user_group: '',
   })
   const [firstLetter, setFirstLetter] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -115,7 +115,7 @@ const Auth = () => {
       if (isLogin) {
         await login(form.email, form.password)
       } else {
-        await register(form.username, form.nickname, form.email, form.password)
+        await register(form.name, form.nickname, form.email, form.password, form.user_group)
       }
     } catch (error) {
       // Error handling is done in the auth context
@@ -200,8 +200,8 @@ const Auth = () => {
               <>
                 <TextField
                   label="Имя пользователя"
-                  name="username"
-                  value={form.username}
+                  name="name"
+                  value={form.name}
                   onChange={handleInput}
                   fullWidth
                   sx={{ mb: 2, fontSize: { xs: 14, sm: 16 } }}
@@ -216,8 +216,8 @@ const Auth = () => {
                 />
                 <TextField
                   label="Класс/группа"
-                  name="group"
-                  value={form.group}
+                  name="user_group"
+                  value={form.user_group}
                   onChange={handleInput}
                   fullWidth
                   sx={{ mb: 2, fontSize: { xs: 14, sm: 16 } }}

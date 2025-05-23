@@ -23,6 +23,7 @@ const RegisterPage: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    user_group: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,8 @@ const RegisterPage: React.FC = () => {
         formData.name,
         formData.nickname,
         formData.email,
-        formData.password
+        formData.password,
+        formData.user_group
       );
       navigate('/');
     } catch (err) {
@@ -137,6 +139,17 @@ const RegisterPage: React.FC = () => {
                     type="password"
                     id="confirmPassword"
                     value={formData.confirmPassword}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    required
+                    fullWidth
+                    id="user_group"
+                    label="Группа"
+                    name="user_group"
+                    value={formData.user_group}
                     onChange={handleChange}
                   />
                 </Grid>

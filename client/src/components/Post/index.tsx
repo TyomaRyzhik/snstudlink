@@ -29,19 +29,24 @@ import { Box, Typography, LinearProgress } from '@mui/material';
 interface PostProps {
   id: string;
   content: string;
-  media: string[];
+  media?: Array<{
+    id: string;
+    type: string;
+    path: string;
+    created_at: string;
+  }>;
   author: {
     id: string;
     nickname: string;
-    avatar?: string;
+    avatar?: string | null;
   };
-  likes: string[];
-  commentsCount: number;
-  retweetsCount: number;
+  likes?: string[];
+  commentsCount?: number;
+  retweetsCount?: number;
   createdAt: string;
   updatedAt?: string;
-  isRetweeted: boolean;
-  isLiked: boolean;
+  isRetweeted?: boolean;
+  isLiked?: boolean;
   onLike?: () => void;
   onComment?: () => void;
   onRetweet?: () => void;
@@ -73,20 +78,20 @@ interface Comment {
 const Post: React.FC<PostProps> = ({
   id,
   content,
-  media,
+  media = [],
   author,
-  likes,
-  commentsCount,
-  retweetsCount,
+  likes = [],
+  commentsCount = 0,
+  retweetsCount = 0,
   createdAt,
   updatedAt,
-  isRetweeted: initialIsRetweeted,
-  isLiked: initialIsLiked,
+  isRetweeted: initialIsRetweeted = false,
+  isLiked: initialIsLiked = false,
   onLike,
   onComment,
   onRetweet,
   onDelete,
-  poll,
+  poll = null,
 }) => {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(initialIsLiked);
@@ -462,11 +467,17 @@ const Post: React.FC<PostProps> = ({
     return <FileIcon />;
   };
 
-  const renderMedia = (mediaUrl: string, index: number) => {
+  const renderMedia = (mediaItem: { path: string; type: string }, index: number) => {
     const [imgError, setImgError] = useState(false);
-    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico'].some(ext => mediaUrl.toLowerCase().endsWith(ext));
-    const isVideo = ['mp4', 'mov', 'avi'].some(ext => mediaUrl.toLowerCase().endsWith(ext));
-    const fileName = mediaUrl.split('/').pop() || mediaUrl;
+    const mediaPath = mediaItem.path;
+    const mediaType = mediaItem.type;
+    const ext = mediaPath.split('.').pop()?.toLowerCase() || '';
+    const isImage = mediaType === 'image' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico'].includes(ext);
+    const isPdf = ext === 'pdf';
+    const isDoc = ['doc', 'docx'].includes(ext);
+    const isExcel = ['xls', 'xlsx'].includes(ext);
+    const isVideo = mediaType === 'video' || ['mp4', 'mov', 'avi'].includes(ext);
+    const fileName = mediaPath.split('/').pop() || mediaPath;
 
     const handleDownload = () => {
       const downloadUrl = `${API_URL}/api/posts/download/${fileName}`;
@@ -474,7 +485,7 @@ const Post: React.FC<PostProps> = ({
     };
 
     if (isImage) {
-      const imageUrl = `${API_URL}${mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`}`;
+      const imageUrl = `${API_URL}${mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`}`;
       return (
         <div key={index} className={styles.mediaItem}>
           {!imgError ? (
@@ -496,9 +507,24 @@ const Post: React.FC<PostProps> = ({
           </button>
         </div>
       );
+    } else if (isPdf || isDoc || isExcel) {
+      let Icon = FileIcon;
+      if (isPdf) Icon = PdfIcon;
+      else if (isDoc) Icon = DocIcon;
+      else if (isExcel) Icon = ExcelIcon;
+      return (
+        <div key={index} className={styles.filePreview}>
+          <div className={styles.fileIcon}>
+            <Icon />
+          </div>
+          <span className={styles.fileName}>{fileName}</span>
+          <button onClick={handleDownload} className={styles.downloadButton}>
+            <DownloadIcon />
+          </button>
+        </div>
+      );
     } else if (isVideo) {
-      const videoUrl = `${API_URL}${mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`}`;
-      console.log('Attempting to load video with URL:', videoUrl);
+      const videoUrl = `${API_URL}${mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`}`;
       return (
         <div key={index} className={styles.mediaItem}>
           <video 
@@ -507,7 +533,6 @@ const Post: React.FC<PostProps> = ({
             className={styles.mediaPreviewImage}
             onError={(e) => {
               console.error('Video load error for URL:', videoUrl, e);
-              // Optional: add logic here to show a fallback (like file icon) if video fails
             }}
           />
           <button onClick={handleDownload} className={styles.downloadButton}>
@@ -519,7 +544,7 @@ const Post: React.FC<PostProps> = ({
       return (
         <div key={index} className={styles.filePreview}>
           <div className={styles.fileIcon}>
-            {getFileIcon(fileName)}
+            <FileIcon />
           </div>
           <span className={styles.fileName}>{fileName}</span>
           <button onClick={handleDownload} className={styles.downloadButton}>
@@ -546,7 +571,18 @@ const Post: React.FC<PostProps> = ({
               {author.nickname}
             </Link>
             <span className={styles.postTime}>
-              {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ru })}
+              {(() => {
+                try {
+                  const date = new Date(createdAt);
+                  if (!createdAt || isNaN(date.getTime())) {
+                    return 'Нет даты';
+                  }
+                  return formatDistanceToNow(date, { addSuffix: true, locale: ru });
+                } catch (error) {
+                  console.error('Error formatting date:', error);
+                  return 'Нет даты';
+                }
+              })()}
             </span>
             {user && user.id === author.id && (
               <button className={styles.deleteButton} onClick={handleDelete}>
@@ -555,9 +591,9 @@ const Post: React.FC<PostProps> = ({
             )}
           </div>
           <div className={styles.postText}>{content}</div>
-          {media && media.length > 0 && (
+          {Array.isArray(media) && media.length > 0 && (
             <div className={styles.mediaContainer}>
-              {media.map((mediaUrl, index) => renderMedia(mediaUrl, index))}
+              {media.map((mediaItem, index) => renderMedia(mediaItem, index))}
             </div>
           )}
 
