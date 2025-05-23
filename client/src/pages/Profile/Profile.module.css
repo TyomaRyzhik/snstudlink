@@ -1,0 +1,19 @@
+.avatarContainer {
+  display: flex;
+  align-items: center;
+  margin-top: -50px;
+  padding: 0 16px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid #15202b;
+  overflow: hidden;
+  margin-right: 16px;
+}
+
+.editButton {
+  margin-left: auto;
+} 
