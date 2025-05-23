@@ -16,11 +16,11 @@ import styles from './Sidebar.module.css'
 
 const menuItems = [
   { text: 'Главная', icon: <HomeIcon />, path: '/' },
-  { text: 'Поиск', icon: <TagIcon />, path: '/explore' },
+  { text: 'Конференции', icon: <TagIcon />, path: '/explore' },
   { text: 'Уведомления', icon: <NotificationsIcon />, path: '/notifications' },
   { text: 'Сообщения', icon: <MailIcon />, path: '/messages' },
   { text: 'Учёба', icon: <BookmarkIcon />, path: '/study' },
-  { text: 'Списки', icon: <ListAltIcon />, path: '/lists' },
+  { text: 'Чек-лист', icon: <ListAltIcon />, path: '/lists' },
   { text: 'Настройки', icon: <MoreHorizIcon />, path: '/settings' },
   { text: 'Профиль', icon: <PersonIcon />, path: '/profile/me' },
 ]

@@ -185,8 +185,10 @@ const Post: React.FC<PostProps> = ({
         throw new Error('Failed to like post');
       }
 
+      const data = await response.json();
       setIsLiked(!isLiked);
       onLike?.();
+      showNotification(isLiked ? 'Лайк убран' : 'Лайк добавлен', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to like post');
       showNotification('Failed to like post', 'error');
@@ -202,7 +204,6 @@ const Post: React.FC<PostProps> = ({
     }
 
     if (isRetweeted) {
-      console.log('Post already retweeted');
       showNotification('Публикация уже репостнута', 'info');
       return;
     }
@@ -246,8 +247,11 @@ const Post: React.FC<PostProps> = ({
         body: JSON.stringify({ content: commentText }),
       });
       if (!response.ok) throw new Error('Failed to add comment');
+      
+      const data = await response.json();
       setCommentText('');
-      // После успешной отправки — обновить список
+      
+      // Обновляем список комментариев
       const commentsRes = await fetch(`${API_URL}/api/posts/${id}/comments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -255,16 +259,25 @@ const Post: React.FC<PostProps> = ({
       });
       const commentsData = await commentsRes.json();
       setComments(commentsData);
+      
+      // Обновляем счетчик комментариев
+      onComment?.();
+      
       setIsCommentModalOpen(false);
+      showNotification('Комментарий успешно добавлен', 'success');
     } catch (error) {
-      alert('Ошибка при добавлении комментария');
+      showNotification('Ошибка при добавлении комментария', 'error');
     } finally {
       setIsCommentSubmitting(false);
     }
   };
 
   const handleLikeComment = async (commentId: string) => {
-    if (!user) return;
+    if (!user) {
+      showNotification('Пожалуйста, войдите в систему', 'error');
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_URL}/api/posts/comments/${commentId}/like`, {
         method: 'POST',
@@ -272,40 +285,19 @@ const Post: React.FC<PostProps> = ({
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
+      
       if (!response.ok) throw new Error('Failed to like comment');
+      
       const data = await response.json();
-      setComments((prev) => prev.map((c) => c.id === commentId ? { ...c, likesCount: data.likesCount } : c));
-    } catch {}
-  };
-
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`${API_URL}/api/posts/${id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ content: newComment }),
-      });
-      if (!response.ok) throw new Error('Failed to add comment');
-      setNewComment('');
-      // После успешной отправки — обновить список
-      const commentsRes = await fetch(`${API_URL}/api/posts/${id}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const commentsData = await commentsRes.json();
-      setComments(commentsData);
-      setShowComments(false);
+      setComments((prev) => prev.map((c) => 
+        c.id === commentId 
+          ? { ...c, likesCount: data.likesCount, isLiked: !c.isLiked } 
+          : c
+      ));
+      
+      showNotification(data.message || 'Лайк обновлен', 'success');
     } catch (error) {
-      alert('Ошибка при добавлении комментария');
-    } finally {
-      setIsSubmitting(false);
+      showNotification('Ошибка при лайке комментария', 'error');
     }
   };
 

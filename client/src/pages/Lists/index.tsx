@@ -161,7 +161,7 @@ const Lists = () => {
   }
 
   return (
-    <PageLayout title="Список дел">
+    <PageLayout title="Чек-лист">
       <Box sx={{ maxWidth: 600, mx: 'auto', p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h5" component="h1">

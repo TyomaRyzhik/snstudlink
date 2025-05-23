@@ -2,7 +2,7 @@ import styles from '../pages/Home/Home.module.css'
 
 const Trends = () => (
   <div className={styles.trends}>
-    <input className={styles.trendsSearch} placeholder="Search Twitter" />
+    <input className={styles.trendsSearch} placeholder="Search" />
     <div className={styles.trendBlock}>
       <div className={styles.trendTitle}>Trends for you</div>
       <div style={{marginBottom: 16}}>

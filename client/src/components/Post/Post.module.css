@@ -436,4 +436,29 @@
   justify-content: center;
   background: #222;
   border-radius: 8px;
+}
+
+:global(.MuiOutlinedInput-root input) {
+  color: #fff !important;
+}
+:global(.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline) {
+  border-color: #fff !important;
+  transition: border-color 0.2s;
+}
+:global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-color: #1d9bf0 !important;
+}
+:global(.MuiOutlinedInput-root input::placeholder) {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+:global(.MuiOutlinedInput-root ~ .MuiInputLabel-root),
+:global(.MuiInputLabel-root) {
+  color: #fff !important;
+}
+
+:global(.MuiOutlinedInput-root.Mui-focused ~ .MuiInputLabel-root),
+:global(.MuiInputLabel-root.Mui-focused) {
+  color: #1d9bf0 !important;
 } 
