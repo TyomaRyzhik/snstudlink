@@ -16,6 +16,7 @@ import Messages from './pages/Messages';
 import Lists from './pages/Lists';
 import Profile from './pages/Profile'; // Import Profile component
 import More from './pages/More'; // Import the More component for Settings
+import { ConferencesPage } from './pages/ConferencesPage';
 // Assuming ProfilePage handles both /profile and /profile/me, or create a specific one if needed
 // import MorePage from './pages/More/MorePage'; // Uncomment if a MorePage component exists
 
@@ -54,6 +55,7 @@ const App: React.FC = () => {
         <Route path="/study" element={<StudyPage />} />
         <Route path="/study/course/:courseId" element={<CourseDetails />} />
         <Route path="/settings" element={<More />} /> {/* Use More component for Settings */}
+        <Route path="/conferences" element={<ConferencesPage />} />
         {/* <Route path="/more" element={<MorePage />} /> */}
       </Route>
 

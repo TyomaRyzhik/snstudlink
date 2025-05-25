@@ -14,14 +14,16 @@ import { Lecture } from './entities/Lecture'
 import { Assignment } from './entities/Assignment'
 import { ChecklistItem } from './entities/ChecklistItem'
 import { Role } from './entities/Role'
+import { Conference } from './entities/Conference'
+import { Meeting } from './entities/Meeting'
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: 'localhost',
-  port: 5434,
-  username: 'studlink',
-  password: 'studlink_password',
-  database: 'studlink_db',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5435'),
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.DB_NAME || 'studlink',
   synchronize: false,
   logging: false,
   entities: [
@@ -39,7 +41,9 @@ export const AppDataSource = new DataSource({
     Lecture,
     Assignment,
     ChecklistItem,
-    Role
+    Role,
+    Conference,
+    Meeting
   ],
   subscribers: [],
   migrations: [],

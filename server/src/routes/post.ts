@@ -120,7 +120,7 @@ router.get('/feed', authenticateToken, async (req: AuthenticatedRequest, res: Re
       res.status(404).json({ message: 'User not found' })
       return
     }
-    const posts = await postRepository.findAllWithMedia()
+    const posts = await postRepository.findAllWithMedia(1, 100)
     res.json(posts)
   } catch (error) {
     console.error('Get feed error:', error)

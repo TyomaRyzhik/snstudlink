@@ -34,7 +34,7 @@ router.get('/me', authenticateToken, async (req: Request, res: Response): Promis
 
     const user = await userRepository.findOne({
       where: { id: req.user.id },
-      relations: ['followers', 'following', 'groups'],
+      relations: ['followers', 'following']
     })
 
     if (!user) {
@@ -42,10 +42,37 @@ router.get('/me', authenticateToken, async (req: Request, res: Response): Promis
       return
     }
 
-    res.json(user)
+    // Форматируем ответ, чтобы включить только необходимые поля
+    const formattedUser = {
+      id: user.id,
+      name: user.name,
+      nickname: user.nickname,
+      email: user.email,
+      avatar: user.avatar || null,
+      banner: user.banner || null,
+      about: user.about || null,
+      user_group: user.user_group,
+      followers: user.followers?.map(f => ({
+        id: f.id,
+        name: f.name,
+        nickname: f.nickname,
+        avatar: f.avatar || null
+      })) || [],
+      following: user.following?.map(f => ({
+        id: f.id,
+        name: f.name,
+        nickname: f.nickname,
+        avatar: f.avatar || null
+      })) || []
+    }
+
+    res.json(formattedUser)
   } catch (error) {
     console.error('Get current user error:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 })
 
@@ -54,7 +81,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await userRepository.findOne({
       where: { id: req.params.id },
-      relations: ['followers', 'following', 'groups'],
+      relations: ['followers', 'following']
     })
 
     if (!user) {
@@ -62,10 +89,37 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    res.json(user)
+    // Форматируем ответ, чтобы включить только необходимые поля
+    const formattedUser = {
+      id: user.id,
+      name: user.name,
+      nickname: user.nickname,
+      email: user.email,
+      avatar: user.avatar || null,
+      banner: user.banner || null,
+      about: user.about || null,
+      user_group: user.user_group,
+      followers: user.followers?.map(f => ({
+        id: f.id,
+        name: f.name,
+        nickname: f.nickname,
+        avatar: f.avatar || null
+      })) || [],
+      following: user.following?.map(f => ({
+        id: f.id,
+        name: f.name,
+        nickname: f.nickname,
+        avatar: f.avatar || null
+      })) || []
+    }
+
+    res.json(formattedUser)
   } catch (error) {
     console.error('Get user error:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 })
 
@@ -107,10 +161,27 @@ router.put('/me', authenticateToken, upload.fields([
 
     await userRepository.save(user)
 
-    res.json(user)
+    // Форматируем ответ
+    const formattedUser = {
+      id: user.id,
+      name: user.name,
+      nickname: user.nickname,
+      email: user.email,
+      avatar: user.avatar || null,
+      banner: user.banner || null,
+      about: user.about || null,
+      user_group: user.user_group,
+      followers: [],
+      following: []
+    }
+
+    res.json(formattedUser)
   } catch (error) {
     console.error('Update user error:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 })
 
@@ -169,7 +240,10 @@ router.post('/:id/follow', authenticateToken, async (req: AuthenticatedRequest, 
     })
   } catch (error) {
     console.error('Follow user error:', error)
-    res.status(500).json({ message: 'Internal server error' })
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 })
 

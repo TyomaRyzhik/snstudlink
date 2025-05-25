@@ -1,11 +1,13 @@
 import { Router, Request, Response } from 'express'
 import { hash, compare } from 'bcryptjs'
 import { sign } from 'jsonwebtoken'
-import { UserRepository } from '../db/repositories/user.repository'
+import { UserRepository } from '../repositories/UserRepository'
 import { authenticateToken } from '../middleware/auth'
 
 const router = Router()
 const userRepository = new UserRepository()
+
+const JWT_SECRET = process.env.JWT_SECRET || '2486acf3edba9e5c5229a13e551f09020cd1d765806e47405f67ecd85f150700'; // Use a constant for clarity
 
 // Register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
@@ -48,9 +50,10 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     // Generate token
     const token = sign(
       { id: user.id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       {
         expiresIn: '7d',
+        algorithm: 'HS256'
       }
     )
 
@@ -93,9 +96,10 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     // Generate token
     const token = sign(
       { id: user.id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       {
         expiresIn: '7d',
+        algorithm: 'HS256'
       }
     )
 
@@ -122,7 +126,7 @@ router.get('/verify', authenticateToken, (req: Request, res: Response): void => 
     res.status(401).json({ message: 'Unauthorized' })
     return
   }
-  res.json({ user: req.user })
+  res.json({ success: true, user: req.user })
 })
 
 export const authRouter = router 

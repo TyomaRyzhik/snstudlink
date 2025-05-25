@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNotification } from './NotificationContext';
-import axios from 'axios';
 import { API_URL } from '../config';
 
 interface User {
@@ -43,13 +42,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkAuth = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/auth/verify`, {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token');
+      const response = await fetch(`${API_URL}/api/auth/verify`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Authorization': `Bearer ${token}`,
+        },
       });
-      if (response.data.success) {
-        setUser(response.data.user);
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setUser(data.user);
       } else {
         localStorage.removeItem('token');
         setUser(null);
@@ -66,50 +68,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
-      if (!response.ok) {
-        if (response.status === 0) {
-          throw new Error('Не удалось подключиться к серверу. Пожалуйста, проверьте подключение к интернету и попробуйте снова.');
-        }
-        const error = await response.json();
-        throw new Error(error.message || 'Ошибка при входе');
-      }
-
       const data = await response.json();
+      if (!response.ok || !data.token) {
+        throw new Error(data.message || 'Login failed: No token received');
+      }
       localStorage.setItem('token', data.token);
       setUser(data.user);
       showNotification('Successfully logged in', 'success');
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      showNotification('Login failed: ' + (error as Error).message, 'error');
+      return data.user;
+    } catch (error: any) {
+      showNotification('Login failed: ' + (error.message || error), 'error');
       throw error;
     }
   };
 
   const register = async (name: string, nickname: string, email: string, password: string, user_group: string): Promise<User> => {
     try {
-      const response = await axios.post(`${API_URL}/api/auth/register`, {
-        name,
-        nickname,
-        email,
-        password,
-        user_group,
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, nickname, email, password, user_group }),
       });
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Registration failed');
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Registration failed');
       }
-      setUser(response.data.user);
-      localStorage.setItem('token', response.data.token);
+      setUser(data.user);
+      localStorage.setItem('token', data.token);
       showNotification('Registration successful', 'success');
-      return response.data.user;
-    } catch (error) {
-      showNotification('Registration failed: ' + (error as Error).message, 'error');
+      return data.user;
+    } catch (error: any) {
+      showNotification('Registration failed: ' + (error.message || error), 'error');
       throw error;
     }
   };
@@ -127,18 +119,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     newPassword?: string;
   }): Promise<void> => {
     try {
-      const response = await axios.put(`${API_URL}/api/auth/update-profile`, data, {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token');
+      const response = await fetch(`${API_URL}/api/auth/update-profile`, {
+        method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
       });
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Failed to update profile');
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        throw new Error(resData.message || 'Failed to update profile');
       }
-      setUser(response.data.user);
+      setUser(resData.user);
       showNotification('Profile updated successfully', 'success');
-    } catch (error) {
-      showNotification('Failed to update profile: ' + (error as Error).message, 'error');
+    } catch (error: any) {
+      showNotification('Failed to update profile: ' + (error.message || error), 'error');
       throw error;
     }
   };

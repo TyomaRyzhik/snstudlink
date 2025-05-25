@@ -44,7 +44,12 @@ interface User {
 interface Post {
   id: string
   content: string
-  media: string[]
+  media: {
+    id: string;
+    type: string;
+    path: string;
+    createdAt: string;
+  }[];
   author: {
     id: string
     name: string
@@ -88,20 +93,44 @@ const Profile = ({ isMe = false }: ProfileProps) => {
   const [editAvatar, setEditAvatar] = useState<File | null>(null);
   const [editBanner, setEditBanner] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   // Выбор эндпоинта и ключа для useQuery
   const userQueryKey = isMe ? ['user', 'me'] : ['user', id];
   const userQueryFn = async () => {
     if (isMe) {
-      const { data } = await axios.get(`${API_URL}/api/users/me`);
-      return data;
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/users/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUser(data);
+        return data;
+      } else {
+        console.error('Error fetching user data:', data.message);
+        return null;
+      }
     } else {
-      const { data } = await axios.get(`${API_URL}/api/users/${id}`);
-      return data;
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/users/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        return data;
+      } else {
+        console.error('Error fetching user data:', data.message);
+        return null;
+      }
     }
   };
 
-  const { data: user, isLoading: isLoadingUser } = useQuery<User>({
+  const { data: userData, isLoading: isLoadingUser } = useQuery<User>({
     queryKey: userQueryKey,
     queryFn: userQueryFn,
     enabled: isMe ? !!currentUser : !!id,
@@ -109,12 +138,12 @@ const Profile = ({ isMe = false }: ProfileProps) => {
 
   // Update edit states when user data is loaded
   useEffect(() => {
-    if (user) {
-      setEditName(user.name || '');
-      setEditAbout(user.about || '');
-      setEditUserGroup(user.user_group || '');
+    if (userData) {
+      setEditName(userData.name || '');
+      setEditAbout(userData.about || '');
+      setEditUserGroup(userData.user_group || '');
     }
-  }, [user]);
+  }, [userData]);
 
   const postsQueryKey = isMe ? ['posts', 'user', 'me'] : ['posts', 'user', id];
   const postsQueryFn = async () => {
@@ -205,15 +234,21 @@ const Profile = ({ isMe = false }: ProfileProps) => {
         formData.append('banner', editBanner);
       }
 
-      await axios.put(`${API_URL}/api/users/me`, formData, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/users/me`, {
+        method: 'PUT',
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
       });
-
-      queryClient.invalidateQueries({ queryKey: userQueryKey });
-      handleEditClose();
+      const data = await response.json();
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: userQueryKey });
+        handleEditClose();
+      } else {
+        console.error('Error updating profile:', data.message);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
     } finally {
@@ -232,7 +267,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
     return <div style={{ color: 'red', textAlign: 'center', marginTop: 40 }}>Пользователь не найден</div>
   }
 
-  const isFollowing = user.followers.some(
+  const isFollowing = user.followers && user.followers.some(
     (follower) => follower.id === currentUser?.id
   )
 
@@ -430,7 +465,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
                     <Box
                       key={post.id}
                       component="img"
-                      src={post.media[0]}
+                      src={post.media[0].path}
                       sx={{
                         width: '100%',
                         aspectRatio: '1',

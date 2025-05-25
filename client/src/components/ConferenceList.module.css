@@ -1,0 +1,75 @@
+.conferenceList {
+    padding: 0;
+    background: none;
+    border-radius: 0 0 8px 8px;
+    margin-top: 0;
+}
+
+.conferenceList h2 {
+    color: #eee;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    margin-left: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3a3a4c;
+}
+
+.conferenceGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 0;
+}
+
+.conferenceCard {
+    background: #1a1a2e;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+    transition: transform 0.18s cubic-bezier(.4,2,.6,1), box-shadow 0.18s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: auto;
+    border: 1px solid #2a2a3a;
+}
+
+.conferenceCard:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.conferenceCard h3 {
+    margin: 0 0 8px 0;
+    color: #007bff;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.conferenceCard p {
+    margin: 4px 0;
+    color: #bbb;
+    font-size: 0.95rem;
+}
+
+.joinButton {
+    width: auto;
+    padding: 8px 16px;
+    margin-top: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: background-color 0.18s, box-shadow 0.18s;
+    box-shadow: 0 1px 4px rgba(0,123,255,0.08);
+    align-self: flex-end;
+}
+
+.joinButton:hover {
+    background-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.13);
+} 

@@ -16,9 +16,6 @@ export class UserRepository extends BaseRepository<User> {
     }
 
     async findWithRelations(id: string): Promise<User | null> {
-        return this.repository.findOne({
-            where: { id } as FindOptionsWhere<User>,
-            relations: ['groups', 'followers', 'following', 'courseParticipants', 'checklistItems']
-        });
+        return this.repository.findOneBy({ id } as FindOptionsWhere<User>);
     }
 } 

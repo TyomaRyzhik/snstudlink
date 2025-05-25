@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from 'express'
 import { verify } from 'jsonwebtoken'
-import { UserRepository } from '../db/repositories/user.repository'
+import { AppDataSource } from '../data-source'
+import { User } from '../entities/User'
 
 declare module 'express-serve-static-core' {
   interface Request {
-    user?: any
+    user?: { id: string }
   }
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || '2486acf3edba9e5c5229a13e551f09020cd1d765806e47405f67ecd85f150700';
 
 export const authenticateToken = async (
   req: Request,
@@ -22,19 +25,23 @@ export const authenticateToken = async (
       return
     }
 
-    const decoded = verify(token, process.env.JWT_SECRET || 'your-secret-key') as { id: string }
-    const userRepository = new UserRepository()
-    const user = await userRepository.findById(decoded.id)
+    const decoded = verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { id: string }
+    const userRepository = AppDataSource.getRepository(User)
+    const user = await userRepository.findOne({ where: { id: decoded.id } })
 
     if (!user) {
       res.status(403).json({ message: 'User not found' })
       return
     }
 
-    req.user = user
+    req.user = { id: user.id }
     next()
   } catch (error) {
-    res.status(403).json({ message: 'Invalid token' })
+    console.error('Authentication error:', error)
+    res.status(403).json({ 
+      message: 'Invalid token', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
     return
   }
 } 

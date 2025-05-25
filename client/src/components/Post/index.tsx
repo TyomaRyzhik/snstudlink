@@ -33,7 +33,7 @@ interface PostProps {
     id: string;
     type: string;
     path: string;
-    created_at: string;
+    createdAt: string;
   }>;
   author: {
     id: string;

@@ -38,13 +38,16 @@ const Home = () => {
     queryKey: ['posts'],
     queryFn: async () => {
       const token = localStorage.getItem('token')
+      console.log('Token from localStorage:', token ? 'exists' : 'missing')
       const response = await fetch(`${API_URL}/api/posts/feed`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
+        }
       })
+      console.log('Response status:', response.status)
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        console.error('Error response:', errorData)
         throw new Error('Failed to fetch posts')
       }
       const data = await response.json();

@@ -66,11 +66,31 @@ export class User {
   groups: Group[]
 
   @ManyToMany(() => User)
-  @JoinTable()
+  @JoinTable({
+    name: 'users_followers_users',
+    joinColumn: {
+      name: 'usersId_1',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'usersId_2',
+      referencedColumnName: 'id'
+    }
+  })
   followers: User[]
 
   @ManyToMany(() => User)
-  @JoinTable()
+  @JoinTable({
+    name: 'users_followers_users',
+    joinColumn: {
+      name: 'usersId_2',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'usersId_1',
+      referencedColumnName: 'id'
+    }
+  })
   following: User[]
 
   @OneToMany(() => List, (list) => list.owner)
@@ -85,9 +105,9 @@ export class User {
   @OneToMany(() => ChecklistItem, checklistItem => checklistItem.user)
   checklistItems: ChecklistItem[]
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date
 } 

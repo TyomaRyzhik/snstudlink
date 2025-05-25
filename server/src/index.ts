@@ -12,6 +12,7 @@ import { courseRouter } from './routes/course'
 import { lectureRouter } from './routes/lecture'
 import { assignmentRouter } from './routes/assignment'
 import checklistRoutes from './routes/checklistRoutes'
+import conferenceRoutes from './routes/conferenceRoutes'
 import path from 'path'
 import { requestLogger } from './middleware/logger'
 import fs from 'fs'
@@ -21,10 +22,11 @@ const app = express()
 
 // Настройка CORS
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
+  optionsSuccessStatus: 200
 }))
 
 // Создаем папку uploads, если она не существует
@@ -56,6 +58,7 @@ app.use('/api/courses', courseRouter)
 app.use('/api/lectures', lectureRouter)
 app.use('/api/assignments', assignmentRouter)
 app.use('/api/checklist', checklistRoutes)
+app.use('/api/conferences', conferenceRoutes)
 
 // Request logging middleware
 app.use(requestLogger)
@@ -116,7 +119,7 @@ AppDataSource.initialize()
   .then(async () => {
     console.log('Database connection initialized')
     await runMigrations()
-    const PORT = process.env.PORT || 3002
+    const PORT = process.env.PORT || 3003
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`)
     })

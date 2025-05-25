@@ -1,0 +1,1 @@
+ALTER TABLE "group" ADD COLUMN IF NOT EXISTS "avatar" varchar; 

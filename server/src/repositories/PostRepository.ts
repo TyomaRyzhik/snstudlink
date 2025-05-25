@@ -17,7 +17,7 @@ export class PostRepository extends BaseRepository<Post> {
     async findByAuthor(authorId: string): Promise<Post[]> {
         return this.repository.find({
             where: { author: { id: authorId } } as FindOptionsWhere<Post>,
-            relations: ['comments', 'likes'],
+            relations: ['author', 'comments', 'likes'],
             order: { createdAt: 'DESC' }
         });
     }

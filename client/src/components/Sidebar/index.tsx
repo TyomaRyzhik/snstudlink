@@ -10,13 +10,14 @@ import {
   Person as PersonIcon,
   MoreHoriz as MoreHorizIcon,
   Logout as LogoutIcon,
+  VideoCall as VideoCallIcon,
 } from '@mui/icons-material'
 import { useAuth } from '../../contexts/AuthContext'
 import styles from './Sidebar.module.css'
 
 const menuItems = [
   { text: 'Главная', icon: <HomeIcon />, path: '/' },
-  { text: 'Конференции', icon: <TagIcon />, path: '/explore' },
+  { text: 'Конференции', icon: <VideoCallIcon />, path: '/conferences' },
   { text: 'Уведомления', icon: <NotificationsIcon />, path: '/notifications' },
   { text: 'Сообщения', icon: <MailIcon />, path: '/messages' },
   { text: 'Учёба', icon: <BookmarkIcon />, path: '/study' },
