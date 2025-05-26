@@ -242,6 +242,11 @@ const CreatePost: React.FC<{ onPostCreated?: () => void }> = ({ onPostCreated })
                 margin="normal"
                 size="small"
                 className={styles.pollInput}
+                sx={{
+                  '& .MuiOutlinedInput-root input': {
+                    color: 'white !important',
+                  },
+                }}
               />
               {pollOptions.map((option, index) => (
                 <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -254,6 +259,11 @@ const CreatePost: React.FC<{ onPostCreated?: () => void }> = ({ onPostCreated })
                     margin="normal"
                     size="small"
                     className={styles.pollInput}
+                    sx={{
+                      '& .MuiOutlinedInput-root input': {
+                        color: 'white !important',
+                      },
+                    }}
                   />
                   {pollOptions.length > 2 && (
                     <IconButton onClick={() => handleRemovePollOption(index)} size="small">

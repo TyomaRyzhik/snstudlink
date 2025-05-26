@@ -1,5 +1,5 @@
 import styles from '../pages/Home/Home.module.css'
-import Trends from './Trends'
+import RecentPostsSidebar from './RecentPostsSidebar'
 
 interface PageLayoutProps {
   title: string
@@ -13,7 +13,7 @@ const PageLayout = ({ title, children }: PageLayoutProps) => (
       {children}
     </main>
     <aside className={styles.widgets}>
-      <Trends />
+      <RecentPostsSidebar />
     </aside>
   </div>
 )

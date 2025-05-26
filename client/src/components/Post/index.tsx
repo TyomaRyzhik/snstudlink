@@ -467,10 +467,13 @@ const Post: React.FC<PostProps> = ({
     return <FileIcon />;
   };
 
-  const renderMedia = (mediaItem: { path: string; type: string }, index: number) => {
+  const renderMedia = (mediaItem: { path: string; type: string } | string, index: number) => {
     const [imgError, setImgError] = useState(false);
-    const mediaPath = mediaItem.path;
-    const mediaType = mediaItem.type;
+    // Check if mediaItem is a string or an object
+    const mediaPath = typeof mediaItem === 'string' ? mediaItem : mediaItem.path;
+    // We might not have type if it's just a string path, assume file type from extension
+    const mediaType = typeof mediaItem === 'string' ? 'file' : mediaItem.type;
+    
     const ext = mediaPath.split('.').pop()?.toLowerCase() || '';
     const isImage = mediaType === 'image' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico'].includes(ext);
     const isPdf = ext === 'pdf';
@@ -600,7 +603,7 @@ const Post: React.FC<PostProps> = ({
           {/* Display Poll if exists */}
           {poll && (
             <div className={styles.pollContainer}>
-              <h4 className={styles.pollQuestion}>{poll.question}</h4>
+              <h4 className={styles.pollQuestion} style={{ color: 'white' }}>{poll.question}</h4>
               <ul className={styles.pollOptions}>
                 {pollResults.map((option, index) => (
                   <li key={index} className={styles.pollOption}>

@@ -179,16 +179,16 @@ router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: 
       return
     }
     const postId = req.params.id
-    const post = await postRepository.findById(postId)
+    const post = await postRepository.findWithMedia(postId)
     if (!post) {
       res.status(404).json({ message: 'Post not found' })
       return
     }
-    if (post.author_id !== req.user.id) {
+    if (post.author.id !== req.user.id) {
       res.status(403).json({ message: 'Forbidden: You can only delete your own posts' })
       return
     }
-    await postRepository.delete(postId)
+    await postRepository.remove(postId)
     res.status(200).json({ message: 'Post deleted successfully' })
   } catch (error) {
     console.error('Delete post error:', error)

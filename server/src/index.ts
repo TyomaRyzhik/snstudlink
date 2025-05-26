@@ -65,13 +65,17 @@ app.use(requestLogger)
 
 // Execute migrations
 async function runMigrations() {
+  console.log('Starting migrations...');
   try {
     const migrationFiles = fs.readdirSync(path.join(__dirname, 'db/migrations'))
       .filter(file => file.endsWith('.sql'))
       .sort();
 
+    console.log(`Found ${migrationFiles.length} migration files.`);
+
     // First, try to create migrations table if it doesn't exist
     try {
+      console.log('Attempting to create migrations table if not exists...');
       await pool.query(`
         CREATE TABLE IF NOT EXISTS migrations (
           id SERIAL PRIMARY KEY,
@@ -79,13 +83,16 @@ async function runMigrations() {
           executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
+      console.log('Migrations table check/creation complete.');
     } catch (error) {
       console.error('Error creating migrations table:', error);
     }
 
     // Get list of executed migrations
+    console.log('Fetching list of executed migrations...');
     const { rows: executedMigrations } = await pool.query('SELECT name FROM migrations');
     const executedSet = new Set(executedMigrations.map(m => m.name));
+    console.log(`Found ${executedSet.size} already executed migrations.`);
 
     // Execute each migration in a transaction
     for (const file of migrationFiles) {
@@ -95,6 +102,7 @@ async function runMigrations() {
         try {
           await client.query('BEGIN');
           const sql = fs.readFileSync(path.join(__dirname, 'db/migrations', file), 'utf8');
+          console.log(`Executing SQL for ${file}:\n${sql.substring(0, 200)}...`); // Log first 200 chars of SQL
           await client.query(sql);
           await client.query('INSERT INTO migrations (name) VALUES ($1)', [file]);
           await client.query('COMMIT');
@@ -102,29 +110,39 @@ async function runMigrations() {
         } catch (error) {
           await client.query('ROLLBACK');
           console.error(`Error executing migration ${file}:`, error);
-          throw error;
+          console.error(`Migration error details for ${file}:`, error);
+          throw error; // Rethrow the error to stop server startup if migration fails
         } finally {
           client.release();
         }
+      } else {
+          console.log(`Migration ${file} already executed, skipping.`);
       }
     }
+    console.log('All migrations processed.');
   } catch (error) {
-    console.error('Error executing migrations:', error);
-    throw error;
+    console.error('Error during runMigrations function execution:', error);
+    // Do not rethrow here, let the main catch block handle server startup failure
   }
 }
 
 // Initialize database connection and run migrations
 AppDataSource.initialize()
   .then(async () => {
-    console.log('Database connection initialized')
-    await runMigrations()
-    const PORT = process.env.PORT || 3003
+    console.log('Database connection initialized');
+    await runMigrations(); // Ensure migrations run before server starts listening
+    const PORT = process.env.PORT || 3003;
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`)
-    })
+      console.log(`Server is running on port ${PORT}`);
+    });
   })
   .catch((error) => {
-    console.error('Error during database initialization:', error)
-    process.exit(1)
-  }) 
+    console.error('Error during database initialization or migration execution:', error);
+    process.exit(1);
+  });
+
+// Error handling middleware (optional but recommended)
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).send('Internal Server Error');
+}); 
