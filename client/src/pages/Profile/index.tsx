@@ -22,12 +22,12 @@ import axios from 'axios'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { useNavigate } from 'react-router-dom'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import Trends from '../../components/Trends'
 import styles from '../Home/Home.module.css'
 import { useAuth } from '../../contexts/AuthContext'
 import CloseIcon from '@mui/icons-material/Close'
 import { API_URL } from '../../config'
 import Post from '../../components/Post'
+import RecentPostsSidebar from '../../components/RecentPostsSidebar'
 
 interface User {
   id: string
@@ -64,6 +64,15 @@ interface Post {
   updatedAt: string
   isLiked: boolean
   isRetweeted: boolean
+  poll?: {
+    question: string;
+    options: {
+      text: string;
+      votes: number;
+      voterIds?: string[];
+    }[];
+    votes?: string[];
+  } | null
 }
 
 interface ProfileProps {
@@ -454,6 +463,7 @@ const Profile = ({ isMe = false }: ProfileProps) => {
                     onLike={handlePostActionSuccessForProfile}
                     onRetweet={handlePostActionSuccessForProfile}
                     onComment={handlePostActionSuccessForProfile}
+                    poll={post.poll}
                   />
                 ))}
               </Stack>
@@ -478,10 +488,10 @@ const Profile = ({ isMe = false }: ProfileProps) => {
             )}
           </Box>
         </div>
-        <div className={styles.widgets}>
-          <Trends />
-        </div>
       </main>
+      <div className={styles.widgets}>
+        <RecentPostsSidebar />
+      </div>
       {/* Модальное окно редактирования профиля */}
       <Dialog open={editOpen} onClose={handleEditClose} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

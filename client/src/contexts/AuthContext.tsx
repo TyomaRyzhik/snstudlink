@@ -8,6 +8,7 @@ interface User {
   nickname: string;
   email: string;
   avatar?: string;
+  role?: 'super-admin' | 'teacher' | 'student' | string;
 }
 
 interface AuthContextType {

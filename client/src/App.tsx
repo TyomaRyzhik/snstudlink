@@ -1,9 +1,12 @@
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-// import Navigation from './components/Navigation'; // Navigation is now handled within Layout
-// import HomePage from './pages/Home/HomePage'; // Remove HomePage import
-// import ProfilePage from './pages/Profile/ProfilePage'; // Remove ProfilePage import
-import StudyPage from './pages/Study/StudyPage';
+import {
+  // import Navigation from './components/Navigation'; // Navigation is now handled within Layout
+  // import HomePage from './pages/Home/HomePage'; // Remove HomePage import
+  // import ProfilePage from './pages/Profile/ProfilePage'; // Remove ProfilePage import
+  // import StudyPage from './pages/Study/StudyPage'; // Remove StudyPage import
+  Typography // Import Typography
+} from '@mui/material';
 import CourseDetails from './pages/Study/CourseDetails';
 import { useAuth } from './contexts/AuthContext';
 import Auth from './pages/Auth';
@@ -17,6 +20,13 @@ import Lists from './pages/Lists';
 import Profile from './pages/Profile'; // Import Profile component
 import More from './pages/More'; // Import the More component for Settings
 import { ConferencesPage } from './pages/ConferencesPage';
+import StudyPage from './pages/Study';
+import SubjectDetails from './pages/Study/SubjectDetails';
+import CreateSubjectPage from './pages/Study/CreateSubjectPage';
+import LessonDetails from './pages/Study/LessonDetails';
+import CreateCoursePage from './pages/Study/CreateCoursePage'; // Import CreateCoursePage
+import RoleBasedRoute from './components/RoleBasedRoute'; // Import RoleBasedRoute
+import { UserRole } from './types'; // Import UserRole type
 // Assuming ProfilePage handles both /profile and /profile/me, or create a specific one if needed
 // import MorePage from './pages/More/MorePage'; // Uncomment if a MorePage component exists
 
@@ -54,6 +64,15 @@ const App: React.FC = () => {
         <Route path="/profile/me" element={<Profile isMe={true} />} /> {/* Use Profile component for current user's profile */}
         <Route path="/study" element={<StudyPage />} />
         <Route path="/study/course/:courseId" element={<CourseDetails />} />
+        <Route path="/study/subject/:subjectId" element={<SubjectDetails />} />
+        <Route path="/study/lesson/:lessonId" element={<LessonDetails />} />
+
+        {/* Role-based protected routes */}
+        <Route element={<RoleBasedRoute allowedRoles={['teacher', 'super-admin']} />}>
+          <Route path="/study/subject/create" element={<CreateSubjectPage />} />
+          <Route path="/study/course/create" element={<CreateCoursePage />} />
+        </Route>
+
         <Route path="/settings" element={<More />} /> {/* Use More component for Settings */}
         <Route path="/conferences" element={<ConferencesPage />} />
         {/* <Route path="/more" element={<MorePage />} /> */}
@@ -61,6 +80,7 @@ const App: React.FC = () => {
 
       {/* Catch-all route */}
       <Route path="*" element={<Navigate to="/" />} />
+      <Route path="/unauthorized" element={<Typography variant="h4" align="center" sx={{ mt: 4 }}>Unauthorized Access</Typography>} />
     </Routes>
   );
 };

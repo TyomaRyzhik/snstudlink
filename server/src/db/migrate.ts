@@ -1,6 +1,9 @@
+import dotenv from 'dotenv';
 import { pool } from './config';
 import fs from 'fs';
 import path from 'path';
+
+dotenv.config();
 
 interface Migration {
   name: string;
@@ -8,9 +11,11 @@ interface Migration {
 
 async function runMigrations() {
   const client = await pool.connect();
+  console.log('Database client connected.');
   
   try {
     // Создаем таблицу для отслеживания миграций, если её нет
+    console.log('Checking if migrations table exists and creating if necessary...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS migrations (
         id SERIAL PRIMARY KEY,
@@ -20,6 +25,7 @@ async function runMigrations() {
     `);
 
     // Получаем список выполненных миграций
+    console.log('Fetching executed migrations from the database...');
     const { rows: executedMigrations } = await client.query<Migration>(
       'SELECT name FROM migrations ORDER BY id'
     );

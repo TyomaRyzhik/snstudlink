@@ -1,75 +1,61 @@
 import React, { useState } from 'react';
-import { Box, Typography, CircularProgress, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, List, ListItem, ListItemText } from '@mui/material';
-import PageLayout from '../../components/PageLayout';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import { API_URL } from '../../config';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { API_URL } from '../../config';
+import PageLayout from '../../components/PageLayout';
+import { 
+  Box, 
+  Typography, 
+  CircularProgress, 
+  Button, 
+  TextField,
+  InputAdornment,
+  Grid
+} from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
+import axios from 'axios';
+import SubjectCard from '../../components/SubjectCard';
+import { Subject } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next'
 
-interface Course {
-  id: string;
-  title: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  teachers: { // Предполагаем, что бэкенд возвращает учителей в таком формате
-    id: string;
-    nickname: string;
-    name: string;
-    avatar?: string;
-  }[];
-}
-
-const Study = () => {
-  const queryClient = useQueryClient();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newCourseTitle, setNewCourseTitle] = useState('');
-  const [newCourseDescription, setNewCourseDescription] = useState('');
+// Study Page component to display list of subjects
+const StudyPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  // Fetch courses
-  const { data: courses, isLoading, error } = useQuery<Course[]>({
-    queryKey: ['courses'],
+  // Temporary log to check user role
+  console.log('Current user role:', user?.role);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { t } = useTranslation()
+
+  const { data: subjects, isLoading, error } = useQuery<Subject[]>({
+    queryKey: ['subjects'],
     queryFn: async () => {
-      const { data } = await axios.get(`${API_URL}/api/courses`);
-      return data;
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/subjects`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      return response.data;
     },
   });
 
-  // Create course mutation
-  const createCourseMutation = useMutation<Course, Error, { title: string; description?: string }>({
-    mutationFn: async (newCourseData) => {
-      const { data } = await axios.post(`${API_URL}/api/courses`, newCourseData);
-      return data;
-    },
-    onSuccess: () => {
-      // Invalidate the courses query to refetch the list
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
-      // Close modal and clear form
-      setCreateModalOpen(false);
-      setNewCourseTitle('');
-      setNewCourseDescription('');
-    },
-    onError: (error) => {
-      console.error('Error creating course:', error);
-      // Optionally show an error message to the user
-    },
-  });
-
-  const handleCreateSubmit = () => {
-    createCourseMutation.mutate({ title: newCourseTitle, description: newCourseDescription });
+  const handleCreateSubjectClick = () => {
+    navigate('/study/subject/create');
   };
 
-  const handleCourseClick = (courseId: string) => {
-    navigate(`/study/${courseId}`);
-  };
-
-  const isCreatingCourse = createCourseMutation.status === 'pending';
+  const filteredSubjects = subjects?.filter(subject =>
+    subject.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (isLoading) {
     return (
-      <PageLayout title="Учёба">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <PageLayout title={t('study')}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
         </Box>
       </PageLayout>
@@ -78,87 +64,61 @@ const Study = () => {
 
   if (error) {
     return (
-      <PageLayout title="Учёба">
-        <Box p={2}>
-          <Alert severity="error">Ошибка загрузки курсов: {error.message}</Alert>
-        </Box>
+      <PageLayout title={t('study')}>
+        <Typography color="error" align="center" sx={{ mt: 4 }}>
+          {t('error_loading_subjects')}
+        </Typography>
       </PageLayout>
     );
   }
 
   return (
-    <PageLayout title="Учёба">
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>Курсы</Typography>
-        
-        {/* Button to open create course modal */}
-        <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ mb: 2 }}>
-          Создать новый курс
+    <PageLayout
+      title={t('study')}
+      actions={[
+        <Button
+          key="create-subject"
+          variant="contained"
+          color="primary"
+          onClick={handleCreateSubjectClick}
+          sx={{ ml: 2 }}
+        >
+          {t('add_subject')}
         </Button>
-
-        {/* List of courses */}
-        {courses && courses.length > 0 ? (
-          <List>
-            {courses.map((course) => (
-              <ListItem key={course.id} divider button onClick={() => handleCourseClick(course.id)}>
-                <ListItemText 
-                  primary={course.title}
-                  secondary={
-                    <>
-                      <Typography component="span" variant="body2" color="text.primary">
-                        Преподаватели: {course.teachers.map(t => t.name).join(', ') || 'Нет данных'}
-                      </Typography>
-                      {course.description && 
-                        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
-                          {course.description}
-                        </Typography>
-                      }
-                    </>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Typography>Курсов пока нет.</Typography>
-        )}
-
-        {/* Create course modal */}
-        <Dialog open={createModalOpen} onClose={() => setCreateModalOpen(false)} fullWidth maxWidth="sm">
-          <DialogTitle>Создать новый курс</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Название курса"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={newCourseTitle}
-              onChange={(e) => setNewCourseTitle(e.target.value)}
-            />
-            <TextField
-              margin="dense"
-              label="Описание курса (необязательно)"
-              type="text"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={4}
-              value={newCourseDescription}
-              onChange={(e) => setNewCourseDescription(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setCreateModalOpen(false)}>Отмена</Button>
-            <Button onClick={handleCreateSubmit} disabled={isCreatingCourse}>
-              {isCreatingCourse ? 'Создание...' : 'Создать'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+      ]}
+    >
+      <Box sx={{ mb: 4 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder={t('search_subjects')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Box>
+
+      {!filteredSubjects || filteredSubjects.length === 0 ? (
+        <Typography align="center" sx={{ mt: 4 }}>
+          {t('no_subjects_found')}
+        </Typography>
+      ) : (
+        <Grid container spacing={3}>
+          {filteredSubjects.map(subject => (
+            <Grid item xs={12} sm={6} md={4} key={subject.id}>
+              <SubjectCard subject={subject} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </PageLayout>
   );
 };
 
-export default Study; 
+export default StudyPage;

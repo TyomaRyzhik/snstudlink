@@ -18,6 +18,7 @@ import { Message } from './Message'
 import { CourseParticipant } from './CourseParticipant'
 import { ChecklistItem } from './ChecklistItem'
 import { Role } from './Role'
+import { File } from './File'
 
 @Entity('users')
 export class User {
@@ -104,6 +105,9 @@ export class User {
 
   @OneToMany(() => ChecklistItem, checklistItem => checklistItem.user)
   checklistItems: ChecklistItem[]
+
+  @OneToMany(() => File, file => file.uploadedBy)
+  uploadedFiles: File[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date

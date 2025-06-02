@@ -1,0 +1,30 @@
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.card {
+  background-color: #192734;
+  border: 1px solid #2f3336;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.card:hover {
+  background-color: #1a2734;
+  border-color: #1d9bf0;
+}
+
+.title {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.description {
+  color: #e7e9ea;
+  font-size: 14px;
+} 

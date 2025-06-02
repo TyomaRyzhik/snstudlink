@@ -16,6 +16,9 @@ import { ChecklistItem } from './entities/ChecklistItem'
 import { Role } from './entities/Role'
 import { Conference } from './entities/Conference'
 import { Meeting } from './entities/Meeting'
+import { File } from './entities/File'
+import { Subject } from './entities/Subject'
+import { Lesson } from './entities/Lesson'
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -43,8 +46,11 @@ export const AppDataSource = new DataSource({
     ChecklistItem,
     Role,
     Conference,
-    Meeting
+    Meeting,
+    File,
+    Subject,
+    Lesson
   ],
   subscribers: [],
-  migrations: [],
+  migrations: ["src/migrations/**/*.ts"],
 }) 

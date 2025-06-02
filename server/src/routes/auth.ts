@@ -66,6 +66,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         nickname: user.nickname,
         email: user.email,
         user_group: user.user_group,
+        role: user.role?.name
       },
     })
   } catch (error) {
@@ -112,6 +113,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         nickname: user.nickname,
         email: user.email,
         user_group: user.user_group,
+        role: user.role?.name
       },
     })
   } catch (error) {
@@ -126,7 +128,13 @@ router.get('/verify', authenticateToken, (req: Request, res: Response): void => 
     res.status(401).json({ message: 'Unauthorized' })
     return
   }
-  res.json({ success: true, user: req.user })
+  res.json({ 
+    success: true, 
+    user: {
+      id: req.user.id,
+      role: req.user.role
+    }
+  })
 })
 
 export const authRouter = router 

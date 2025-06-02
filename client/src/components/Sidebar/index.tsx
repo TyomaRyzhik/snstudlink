@@ -13,42 +13,64 @@ import {
   VideoCall as VideoCallIcon,
 } from '@mui/icons-material'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import styles from './Sidebar.module.css'
+import { useTranslation } from 'react-i18next'
 
 const menuItems = [
-  { text: 'Главная', icon: <HomeIcon />, path: '/' },
-  { text: 'Конференции', icon: <VideoCallIcon />, path: '/conferences' },
-  { text: 'Уведомления', icon: <NotificationsIcon />, path: '/notifications' },
-  { text: 'Сообщения', icon: <MailIcon />, path: '/messages' },
-  { text: 'Учёба', icon: <BookmarkIcon />, path: '/study' },
-  { text: 'Чек-лист', icon: <ListAltIcon />, path: '/lists' },
-  { text: 'Настройки', icon: <MoreHorizIcon />, path: '/settings' },
-  { text: 'Профиль', icon: <PersonIcon />, path: '/profile/me' },
+  { text: 'home', icon: <HomeIcon />, path: '/' },
+  { text: 'conferences', icon: <VideoCallIcon />, path: '/conferences' },
+  { text: 'notifications', icon: <NotificationsIcon />, path: '/notifications' },
+  { text: 'messages', icon: <MailIcon />, path: '/messages' },
+  { text: 'study', icon: <BookmarkIcon />, path: '/study' },
+  { text: 'checklist', icon: <ListAltIcon />, path: '/lists' },
+  { text: 'settings', icon: <MoreHorizIcon />, path: '/settings' },
+  { text: 'profile', icon: <PersonIcon />, path: '/profile/me' },
 ]
 
 const Sidebar = () => {
   const location = useLocation()
   const { logout, user } = useAuth()
+  const { mode } = useTheme()
+  const { t } = useTranslation()
+
+  const isActive = (path: string) => {
+    if (path === '/profile/me') {
+      return location.pathname.startsWith('/profile')
+    }
+    return location.pathname === path
+  }
 
   return (
     <div className={styles.sidebar}>
       <div className={styles.sidebarInner}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 80 }}>
-          <span style={{ color: '#1da1f2', fontSize: 40, fontWeight: 'bold', fontFamily: 'monospace' }}>&lt;SL&gt;</span>
+          <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 'bold', fontFamily: 'monospace' }}>&lt;SL&gt;</span>
         </div>
         <nav style={{ flex: 1 }}>
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.path
+            const active = isActive(item.path)
             return (
               <RouterLink
                 key={item.text}
                 to={item.path}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 22, padding: '12px 24px', color: isActive ? '#1da1f2' : '#d9d9d9', textDecoration: 'none', fontWeight: isActive ? 700 : 500, background: isActive ? 'rgba(29,161,242,0.1)' : 'none', borderRadius: 32, margin: '4px 0', fontSize: 22, transition: 'background 0.2s',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 22, 
+                  padding: '12px 24px', 
+                  color: active ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: 'none', 
+                  fontWeight: active ? 700 : 500, 
+                  background: active ? 'rgba(255, 255, 255, 0.1)' : 'none', 
+                  borderRadius: 32, 
+                  margin: '4px 0', 
+                  fontSize: 22, 
+                  transition: 'background 0.2s',
                 }}
               >
                 {item.icon}
-                <span>{item.text}</span>
+                <span>{t(item.text)}</span>
               </RouterLink>
             )
           })}
@@ -57,7 +79,7 @@ const Sidebar = () => {
             className={styles.logoutButton}
           >
             <LogoutIcon />
-            <span>Выйти</span>
+            <span>{t('logout')}</span>
           </button>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -67,8 +89,8 @@ const Sidebar = () => {
             style={{ width: 40, height: 40, borderRadius: '50%' }}
           />
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#fff' }}>{user?.nickname}</div>
-            <div style={{ color: '#8899a6' }}>@{user?.nickname}</div>
+            <div style={{ fontWeight: 700, color: '#ffffff' }}>{user?.nickname}</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.7)' }}>@{user?.nickname}</div>
           </div>
         </div>
       </div>

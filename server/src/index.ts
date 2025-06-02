@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import 'reflect-metadata'
 import express from 'express'
 import cors from 'cors'
@@ -8,11 +9,13 @@ import { authRouter } from './routes/auth'
 import { notificationRouter } from './routes/notification'
 import { listRouter } from './routes/list'
 import { messageRouter } from './routes/message'
-import { courseRouter } from './routes/course'
+import courseRouter from './routes/course'
 import { lectureRouter } from './routes/lecture'
 import { assignmentRouter } from './routes/assignment'
 import checklistRoutes from './routes/checklistRoutes'
 import conferenceRoutes from './routes/conferenceRoutes'
+import subjectRouter from './routes/subject'
+import lessonRouter from './routes/lesson'
 import path from 'path'
 import { requestLogger } from './middleware/logger'
 import fs from 'fs'
@@ -59,6 +62,8 @@ app.use('/api/lectures', lectureRouter)
 app.use('/api/assignments', assignmentRouter)
 app.use('/api/checklist', checklistRoutes)
 app.use('/api/conferences', conferenceRoutes)
+app.use('/api/subjects', subjectRouter)
+app.use('/api/lessons', lessonRouter)
 
 // Request logging middleware
 app.use(requestLogger)

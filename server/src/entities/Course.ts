@@ -3,7 +3,7 @@ import { CourseParticipant } from './CourseParticipant';
 import { Lecture } from './Lecture';
 import { Assignment } from './Assignment';
 
-@Entity()
+@Entity('courses')
 export class Course {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

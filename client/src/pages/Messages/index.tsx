@@ -3,6 +3,7 @@ import { Box, Typography, List, ListItem, ListItemText, Avatar, Divider, TextFie
 import SendIcon from '@mui/icons-material/Send'
 import { useState, useEffect, useRef } from 'react'
 import { API_URL } from '../../config'
+import { useTranslation } from 'react-i18next'
 
 interface Participant {
   id: string
@@ -39,6 +40,8 @@ const Messages = () => {
 
   // TODO: Get actual current user ID
   const currentUserId = localStorage.getItem('userId') || '' // Replace with actual logic
+
+  const { t } = useTranslation()
 
   // Fetch conversations
   useEffect(() => {
@@ -154,7 +157,7 @@ const Messages = () => {
   const getConversationName = (conversation: Conversation) => {
       // Exclude current user from participant list for display
       const otherParticipants = conversation.participants.filter(p => p.id !== currentUserId); // Use actual user ID check
-      if (otherParticipants.length === 0) return 'Self Chat'; // Case with only one participant (shouldn't happen in typical messenger)
+      if (otherParticipants.length === 0) return t('self_chat'); // Case with only one participant (shouldn't happen in typical messenger)
       if (otherParticipants.length === 1) return otherParticipants[0].nickname;
       return otherParticipants.map(p => p.nickname).join(', '); // For group chats
   };
@@ -170,21 +173,21 @@ const Messages = () => {
     };
 
   return (
-    <PageLayout title="Сообщения">
+    <PageLayout title={t('messages')}>
       <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}> {/* Adjust height based on header */}
 
         {/* Conversations List (Sidebar) */}
         <Box sx={{ width: 300, borderRight: 1, borderColor: 'divider', overflowY: 'auto' }}>
-          <Typography variant="h6" sx={{ p: 2 }}>Беседы</Typography>
+          <Typography variant="h6" sx={{ p: 2 }}>{t('conversations')}</Typography>
           <Divider />
           {loadingConversations ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                 <CircularProgress />
               </Box>
           ) : error ? (
-              <Typography color="error" sx={{ mt: 2, px: 2 }}>Ошибка загрузки бесед: {error}</Typography>
+              <Typography color="error" sx={{ mt: 2, px: 2 }}>{t('error_loading_conversations')} {error}</Typography>
           ) : conversations.length === 0 ? (
-              <Typography color="text.secondary" sx={{ mt: 2, px: 2 }}>У вас пока нет бесед</Typography>
+              <Typography color="text.secondary" sx={{ mt: 2, px: 2 }}>{t('no_conversations_yet')}</Typography>
           ) : (
             <List>
               {conversations.map(conversation => (
@@ -197,7 +200,7 @@ const Messages = () => {
                   <Avatar src={getConversationAvatar(conversation)} sx={{ mr: 2 }} /> {/* Use getConversationAvatar */}
                   <ListItemText
                     primary={getConversationName(conversation)}
-                    secondary={conversation.lastMessage?.content || 'Нет сообщений'}
+                    secondary={conversation.lastMessage?.content || t('no_messages')}
                   />
                 </ListItem>
               ))}
@@ -221,9 +224,9 @@ const Messages = () => {
                       <CircularProgress />
                     </Box>
                 ) : error ? (
-                    <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>Ошибка загрузки сообщений: {error}</Typography>
+                    <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>{t('error_loading_messages')} {error}</Typography>
                 ) : messages.length === 0 ? (
-                    <Typography color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>Начните беседу</Typography>
+                    <Typography color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>{t('start_a_conversation')}</Typography>
                 ) : (
                     messages.map(message => (
                       <Box key={message.id} sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: message.sender.id === currentUserId ? 'flex-end' : 'flex-start' }}> {/* Use actual user ID check, adjust alignment */}

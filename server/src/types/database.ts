@@ -1,5 +1,5 @@
 // Enum типы
-export type UserRole = 'admin' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'teacher' | 'student' | 'super-admin';
 export type MediaType = 'image' | 'video' | 'audio' | 'file';
 export type ReactionType = 'like' | 'dislike';
 export type PomodoroStatus = 'new' | 'in_progress' | 'done';

@@ -10,6 +10,7 @@ import CommentIcon from '@mui/icons-material/Comment'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import DoneAllIcon from '@mui/icons-material/DoneAll'
 import PageLayout from '../../components/PageLayout'
+import { useTranslation } from 'react-i18next'
 
 interface Notification {
   id: number
@@ -35,6 +36,7 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [currentTab, setCurrentTab] = useState(0)
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const fetchNotifications = async () => {
     try {
@@ -114,13 +116,13 @@ const Notifications = () => {
   const getNotificationText = (notification: Notification) => {
     switch (notification.type) {
       case 'LIKE':
-        return 'лайкнул(а) ваш пост'
+        return t('liked_your_post')
       case 'RETWEET':
-        return 'ретвитнул(а) ваш пост'
+        return t('retweeted_your_post')
       case 'COMMENT':
-        return 'прокомментировал(а) ваш пост'
+        return t('commented_on_your_post')
       case 'FOLLOW':
-        return 'подписался(ась) на вас'
+        return t('followed_you')
       default:
         return ''
     }
@@ -151,11 +153,11 @@ const Notifications = () => {
   })
 
   return (
-    <PageLayout title="Уведомления">
+    <PageLayout title={t('notifications')}>
       <Box>
         <Tabs value={currentTab} onChange={handleTabChange} aria-label="notification tabs" centered sx={{ width: '100%' }}>
-          <Tab label="Все" sx={{ flexGrow: 1 }} />
-          <Tab label="Упоминания" sx={{ flexGrow: 1 }} />
+          <Tab label={t('all')} sx={{ flexGrow: 1 }} />
+          <Tab label={t('mentions')} sx={{ flexGrow: 1 }} />
         </Tabs>
         <List>
           {filteredNotifications.map((notification, index) => (
@@ -210,7 +212,7 @@ const Notifications = () => {
           ))}
           {filteredNotifications.length === 0 && (
             <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              У вас пока нет уведомлений
+              {t('no_notifications_yet')}
             </Typography>
           )}
         </List>

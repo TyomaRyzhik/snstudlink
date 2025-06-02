@@ -8,14 +8,23 @@ export class UserRepository extends BaseRepository<User> {
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        return this.repository.findOneBy({ email } as FindOptionsWhere<User>);
+        return this.repository.findOne({
+            where: { email } as FindOptionsWhere<User>,
+            relations: ['role']
+        });
     }
 
     async findByNickname(nickname: string): Promise<User | null> {
-        return this.repository.findOneBy({ nickname } as FindOptionsWhere<User>);
+        return this.repository.findOne({
+            where: { nickname } as FindOptionsWhere<User>,
+            relations: ['role']
+        });
     }
 
     async findWithRelations(id: string): Promise<User | null> {
-        return this.repository.findOneBy({ id } as FindOptionsWhere<User>);
+        return this.repository.findOne({
+            where: { id } as FindOptionsWhere<User>,
+            relations: ['role']
+        });
     }
 } 

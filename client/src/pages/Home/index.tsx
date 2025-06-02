@@ -8,24 +8,30 @@ import Post from '../../components/Post'
 import { API_URL } from '../../config'
 import { Box, Typography, CircularProgress } from '@mui/material'
 import { Post as PostType } from '../../types'
+import { useTranslation } from 'react-i18next'
 
 interface Post {
   id: string
   content: string
-  media: string[]
+  media?: Array<{
+    id: string;
+    type: string;
+    path: string;
+    createdAt: string;
+  }>;
   author: {
     id: string
     nickname: string
     avatar?: string
   }
-  likes: string[]
-  likesCount: number
-  commentsCount: number
-  retweetsCount: number
+  likes?: string[];
+  likesCount?: number
+  commentsCount?: number
+  retweetsCount?: number
   createdAt: string
-  updatedAt: string
-  isLiked: boolean
-  isRetweeted: boolean
+  updatedAt?: string
+  isLiked?: boolean
+  isRetweeted?: boolean
   poll?: { question: string; options: { text: string; votes: number }[] } | null
 }
 
@@ -33,6 +39,7 @@ const Home = () => {
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
   const backendApiUrl = API_URL
+  const { t } = useTranslation()
 
   const { data: posts, isLoading, error } = useQuery<PostType[]>({
     queryKey: ['posts'],
@@ -80,7 +87,7 @@ const Home = () => {
       if (!response.ok) throw new Error('Failed to like post')
       queryClient.invalidateQueries({ queryKey: ['posts'] })
     } catch (error) {
-      showNotification('Ошибка при лайке публикации', 'error')
+      showNotification(t('error_liking_post'), 'error')
     }
   }
 
@@ -99,9 +106,9 @@ const Home = () => {
       })
       if (!response.ok) throw new Error('Failed to retweet post')
       queryClient.invalidateQueries({ queryKey: ['posts'] })
-      showNotification('Публикация успешно репостнута', 'success')
+      showNotification(t('post_retweeted_successfully'), 'success')
     } catch (error) {
-      showNotification('Ошибка при репосте публикации', 'error')
+      showNotification(t('error_retweeting_post'), 'error')
     }
   }
 
@@ -115,16 +122,16 @@ const Home = () => {
       })
       if (!response.ok) throw new Error('Failed to delete post')
       queryClient.invalidateQueries({ queryKey: ['posts'] })
-      showNotification('Публикация успешно удалена', 'success')
+      showNotification(t('post_deleted_successfully'), 'success')
     } catch (error) {
-      showNotification('Ошибка при удалении публикации', 'error')
+      showNotification(t('error_deleting_post'), 'error')
     }
   }
 
   if (error) {
     return (
       <Box p={2}>
-        <Typography color="error">Error loading posts</Typography>
+        <Typography color="error">{t('error_loading_posts')}</Typography>
       </Box>
     )
   }
@@ -141,17 +148,17 @@ const Home = () => {
 
   if (!posts || posts.length === 0) {
     return (
-      <PageLayout title="Главная">
+      <PageLayout title={t('home')}>
         <CreatePost />
         <div className={styles.noPosts}>
-          Пока нет публикаций. Будьте первым, кто поделится чем-то интересным!
+          {t('no_posts_yet')}
         </div>
       </PageLayout>
     )
   }
 
   return (
-    <PageLayout title="Главная">
+    <PageLayout title={t('home')}>
       <CreatePost onPostCreated={() => queryClient.invalidateQueries({ queryKey: ['posts'] })} />
       {posts?.map((post) => {
         console.log('Processing post:', JSON.stringify(post, null, 2))
@@ -197,4 +204,4 @@ const Home = () => {
   )
 }
 
-export default Home 
+export default Home

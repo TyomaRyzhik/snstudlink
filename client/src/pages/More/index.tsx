@@ -1,39 +1,34 @@
 import { useState } from 'react'
 import { Box, Typography, FormControlLabel, Switch, Select, MenuItem, FormControl, InputLabel, Divider } from '@mui/material'
 import PageLayout from '../../components/PageLayout'
+import { useTheme } from '../../contexts/ThemeContext'
+import { useTranslation } from 'react-i18next'
 
 const More = () => {
-  // Placeholder states for settings
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [language, setLanguage] = useState('ru') // Default language
-
-  // Placeholder handlers
-  const handleThemeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setIsDarkMode(event.target.checked)
-    // TODO: Implement theme change logic
-    console.log('Dark mode:', event.target.checked)
-  }
+  const { mode, toggleTheme } = useTheme()
+  const { t, i18n } = useTranslation()
+  const [language, setLanguage] = useState(i18n.language) // Default language from i18n
 
   const handleLanguageChange = (event: any) => {
-    setLanguage(event.target.value as string)
-    // TODO: Implement localization change logic
-    console.log('Language:', event.target.value)
+    const selectedLanguage = event.target.value as string
+    setLanguage(selectedLanguage)
+    i18n.changeLanguage(selectedLanguage)
   }
 
   return (
-    <PageLayout title="Ещё">
+    <PageLayout title={t('settings')}>
       <Box sx={{ maxWidth: 600, mx: 'auto', p: 2 }}>
         <Typography variant="h6" gutterBottom>
-          Настройки
+          {t('settings')}
         </Typography>
 
         <Box sx={{ mb: 4 }}>
           <Typography variant="subtitle1" gutterBottom>
-            Тема оформления
+            {t('theme_settings')}
           </Typography>
           <FormControlLabel
-            control={<Switch checked={isDarkMode} onChange={handleThemeChange} />}
-            label={isDarkMode ? 'Темная тема' : 'Светлая тема'}
+            control={<Switch checked={mode === 'dark'} onChange={toggleTheme} />}
+            label={mode === 'dark' ? t('dark_theme') : t('light_theme')}
           />
         </Box>
 
@@ -41,15 +36,15 @@ const More = () => {
 
         <Box>
           <Typography variant="subtitle1" gutterBottom>
-            Язык
+            {t('language')}
           </Typography>
           <FormControl fullWidth>
-            <InputLabel id="language-select-label">Язык</InputLabel>
+            <InputLabel id="language-select-label">{t('language')}</InputLabel>
             <Select
               labelId="language-select-label"
               id="language-select"
               value={language}
-              label="Язык"
+              label={t('language')}
               onChange={handleLanguageChange}
             >
               <MenuItem value="ru">Русский</MenuItem>
