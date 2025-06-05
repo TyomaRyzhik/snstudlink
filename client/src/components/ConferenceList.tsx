@@ -1,73 +1,83 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import styles from './ConferenceList.module.css';
+import { useQuery } from '@tanstack/react-query';
+import { Box, Typography, CircularProgress } from '@mui/material';
+import { API_URL } from '../config';
+import { useTranslation } from 'react-i18next';
 
 interface Conference {
-    id: string;
-    title: string;
-    room_name: string;
-    scheduled_at: string;
-    host: {
-        id: string;
-        name: string;
-    };
+  id: string;
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  participants: string[];
+  createdBy: string;
 }
 
-export const ConferenceList: React.FC = () => {
-    const [conferences, setConferences] = useState<Conference[]>([]);
-    const navigate = useNavigate();
+const ConferenceList = () => {
+  const { t } = useTranslation();
+  const { data: conferences, isLoading, error } = useQuery<Conference[]>({
+    queryKey: ['conferences'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/conferences`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('Error fetching conferences:', errorData);
+        throw new Error(errorData?.message || 'Failed to fetch conferences');
+      }
+      return response.json();
+    },
+  });
 
-    useEffect(() => {
-        const fetchConferences = async () => {
-            try {
-                const response = await axios.get('/api/conferences');
-                setConferences(response.data);
-            } catch (error) {
-                console.error('Error fetching conferences:', error);
-            }
-        };
-
-        fetchConferences();
-    }, []);
-
-    const handleJoin = async (conferenceId: string, roomName: string) => {
-        try {
-            // Fetch conference details again to get the JWT
-            const response = await axios.get(`/api/conferences/${conferenceId}`);
-            const { conference, jitsiToken } = response.data;
-
-            if (jitsiToken) {
-                window.open(`https://meet.jit.si/${conference.room_name}#jwt=${jitsiToken}`, '_blank');
-            } else {
-                // Fallback if no JWT is available (e.g., not logged in, or Jitsi not configured)
-                window.open(`https://meet.jit.si/${conference.room_name}`, '_blank');
-            }
-
-        } catch (error) {
-            console.error('Error joining conference:', error);
-            alert('Failed to join conference. Please try again.');
-        }
-    };
-
+  if (isLoading) {
     return (
-        <div className={styles.conferenceList}>
-            <h2>Upcoming Conferences</h2>
-            <div className={styles.conferenceGrid}>
-                {conferences.map((conference) => (
-                    <div key={conference.id} className={styles.conferenceCard}>
-                        <h3>{conference.title}</h3>
-                        <p>Host: {conference.host.name}</p>
-                        <p>Scheduled: {new Date(conference.scheduled_at).toLocaleString()}</p>
-                        <button
-                            className={styles.joinButton}
-                            onClick={() => handleJoin(conference.id, conference.room_name)}
-                        >
-                            Join Conference
-                        </button>
-                    </div>
-                ))}
-            </div>
-        </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
     );
-}; 
+  }
+
+  if (error) {
+    return (
+      <Box p={2}>
+        <Typography color="error">{t('failed_to_load_conferences')}</Typography>
+      </Box>
+    );
+  }
+
+  if (!conferences || !Array.isArray(conferences) || conferences.length === 0) {
+    return (
+      <Box p={2}>
+        <Typography color="text.secondary">{t('no_conferences_found')}</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      {conferences.map((conference) => (
+        <Box
+          key={conference.id}
+          sx={{
+            p: 2,
+            borderBottom: '1px solid #22303c',
+            '&:hover': {
+              bgcolor: '#192734',
+            },
+          }}
+        >
+          <Typography variant="h6" sx={{ color: '#fff' }}>{conference.title}</Typography>
+          <Typography variant="body2" sx={{ color: '#8899a6' }}>{conference.description}</Typography>
+          <Typography variant="caption" sx={{ color: '#8899a6' }}>
+            {new Date(conference.startTime).toLocaleString()} - {new Date(conference.endTime).toLocaleString()}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+};
+
+export default ConferenceList; 

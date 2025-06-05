@@ -46,6 +46,9 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    // Log form data
+    console.log('Submitting registration form:', formData);
+
     setLoading(true);
 
     try {
@@ -58,6 +61,7 @@ const RegisterPage: React.FC = () => {
       );
       navigate('/');
     } catch (err) {
+      console.error('Registration error:', err);
       setError('Ошибка при регистрации. Возможно, email уже используется.');
     } finally {
       setLoading(false);

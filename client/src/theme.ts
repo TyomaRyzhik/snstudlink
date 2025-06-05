@@ -31,6 +31,13 @@ const theme = createTheme({
         },
       },
     },
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          margin: 0, // Remove default body margin
+        },
+      },
+    },
   },
 })
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ConferenceList } from '../components/ConferenceList';
+import ConferenceList from '../components/ConferenceList';
 import { ConferenceForm } from '../components/ConferenceForm';
 import styles from './ConferencesPage.module.css';
 import axios from 'axios';

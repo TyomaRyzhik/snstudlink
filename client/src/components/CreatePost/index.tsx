@@ -1,82 +1,40 @@
 import React, { useState, useRef } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import { Box, Typography, Button, TextField, IconButton, MenuItem, Menu, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_URL } from '../../config';
+import { showNotification } from '../../utils/notification';
 import {
   Image as ImageIcon,
-  Poll as PollIcon,
-  Add as AddIcon,
   PictureAsPdf as PdfIcon,
   Description as DocIcon,
   TableChart as ExcelIcon,
   VideoFile as VideoIcon,
-  Delete as DeleteIcon,
   InsertDriveFile as FileIcon,
+  Close as CloseIcon,
+  AddPhotoAlternate,
+  Poll,
+  MoreVert,
 } from '@mui/icons-material';
-import styles from './CreatePost.module.css';
-import { API_URL } from '../../config';
-import { TextField, Box, Button, IconButton, Typography } from '@mui/material';
-import { showNotification } from '../../utils/notification';
+import { useTranslation } from 'react-i18next';
 
-const ACCEPTED_FILE_TYPES = {
-  'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff', '.ico'],
-  'video/*': ['.mp4', '.mov', '.avi'],
-  'application/pdf': ['.pdf'],
-  'application/msword': ['.doc'],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-  'application/vnd.ms-excel': ['.xls'],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-};
+interface CreatePostProps {
+  onPostCreated?: () => void;
+}
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-const CreatePost: React.FC<{ onPostCreated?: () => void }> = ({ onPostCreated }) => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
-  const [media, setMedia] = useState<File[]>([]);
-  const [mediaPreview, setMediaPreview] = useState<Array<{ url: string; type: string; name: string }>>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [showPoll, setShowPoll] = useState(false);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
-  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim() && media.length === 0 && (!showPoll || !pollQuestion.trim())) {
-      showNotification('Публикация не может быть пустой', 'error');
-      return;
-    }
-
-    if (showPoll) {
-      if (!pollQuestion.trim()) {
-        showNotification('Введите вопрос для опроса', 'error');
-        return;
-      }
-      if (pollOptions.some(option => !option.trim())) {
-        showNotification('Все варианты ответа должны быть заполнены', 'error');
-        return;
-      }
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('content', content);
-      
-      media.forEach(file => {
-        formData.append('media', file);
-      });
-
-      if (showPoll) {
-        formData.append('poll', JSON.stringify({
-          question: pollQuestion,
-          options: pollOptions.map(text => ({ text, votes: 0 }))
-        }));
-      }
-
+  const createPostMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
       const response = await fetch(`${API_URL}/api/posts`, {
         method: 'POST',
         headers: {
@@ -89,93 +47,114 @@ const CreatePost: React.FC<{ onPostCreated?: () => void }> = ({ onPostCreated })
         throw new Error('Failed to create post');
       }
 
-      setContent('');
-      setMedia([]);
-      setMediaPreview([]);
-      setShowPoll(false);
-      setPollQuestion('');
-      setPollOptions(['', '']);
-      showNotification('Публикация успешно создана', 'success');
-      onPostCreated?.();
+      return response.json();
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
-    } catch (error) {
-      showNotification('Ошибка при создании публикации', 'error');
+      setContent('');
+      setFiles([]);
+      onPostCreated?.();
+      showNotification('Post created successfully', 'success');
+    },
+    onError: () => {
+      showNotification('Failed to create post', 'error');
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim() && files.length === 0) return;
+
+    setIsSubmitting(true);
+    const formData = new FormData();
+    formData.append('content', content);
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    try {
+      await createPostMutation.mutateAsync(formData);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('File input change event fired.', e);
-    if (e.target.files) {
-      console.log('Files selected:', e.target.files);
-      const newFiles = Array.from(e.target.files);
-      console.log('New files array:', newFiles);
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
 
-      // Проверка размера файлов
-      const oversizedFiles = newFiles.filter(file => file.size > MAX_FILE_SIZE);
-      if (oversizedFiles.length > 0) {
-        console.warn('Oversized files detected:', oversizedFiles);
-        showNotification('Некоторые файлы превышают максимальный размер (10MB)', 'error');
-        return;
-      }
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
 
-      // Проверка типа файлов
-      const invalidFiles = newFiles.filter(file => {
-        const fileType = file.type;
-        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-        
-        const isAccepted = Object.entries(ACCEPTED_FILE_TYPES).some(([acceptedType, extensions]) => {
-          if (acceptedType.endsWith('/*')) {
-            // Handle wildcard types like 'image/*'
-            const baseType = acceptedType.slice(0, -2); // Get 'image'
-            return fileType.startsWith(baseType + '/') && extensions.some(ext => fileExtension === ext.slice(1)); // Check if type starts with 'image/' AND extension is in the list
-          } else {
-            // Handle specific types like 'application/pdf'
-            return fileType === acceptedType; // Check if type matches exactly
-          }
-        });
-
-        console.log(`Checking file: ${file.name}, type: ${fileType}, extension: ${fileExtension}, accepted: ${isAccepted}`);
-        return !isAccepted;
+      const validFiles = files.filter(file => {
+        if (file.size > maxSize) {
+          showNotification(t('some_files_exceed_max_size'), 'warning');
+          return false;
+        }
+        if (!allowedTypes.includes(file.type)) {
+          showNotification(t('some_files_have_unsupported_format'), 'warning');
+          return false;
+        }
+        return true;
       });
 
-      if (invalidFiles.length > 0) {
-        console.warn('Invalid files detected:', invalidFiles);
-        showNotification('Некоторые файлы имеют неподдерживаемый формат', 'error');
-        return;
-      }
-
-      setMedia(prev => [...prev, ...newFiles]);
-      const newPreviews = newFiles.map(file => ({
-        url: URL.createObjectURL(file),
-        type: file.type,
-        name: file.name
-      }));
-      setMediaPreview(prev => [
-        ...prev,
-        ...newPreviews
-      ]);
-      console.log('New files selected and preview generated:', newPreviews);
-      console.log('Updated mediaPreview state:', mediaPreview);
+      setFiles((prev) => [...prev, ...validFiles]);
     }
   };
 
   const handleRemoveFile = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
-    setMediaPreview(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (file: File) => {
+    const type = file.type.split('/')[0];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (type === 'image') return <ImageIcon />;
+    if (type === 'video') return <VideoIcon />;
+    if (ext === 'pdf') return <PdfIcon />;
+    if (['doc', 'docx'].includes(ext || '')) return <DocIcon />;
+    if (['xls', 'xlsx'].includes(ext || '')) return <ExcelIcon />;
+    return <FileIcon />;
   };
 
   const handleAddPollOption = () => {
-    if (pollOptions.length < 4) {
-      setPollOptions([...pollOptions, '']);
-    }
+    setPollOptions([...pollOptions, '']);
   };
 
   const handleRemovePollOption = (index: number) => {
-    if (pollOptions.length > 2) {
-      setPollOptions(pollOptions.filter((_, i) => i !== index));
+    const newOptions = pollOptions.filter((_, i) => i !== index);
+    setPollOptions(newOptions);
+  };
+
+  const handleSavePoll = () => {
+    if (!pollQuestion.trim()) {
+      showNotification(t('enter_poll_question'), 'warning');
+      return;
     }
+    if (pollOptions.some(option => !option.trim())) {
+      showNotification(t('all_poll_options_must_be_filled'), 'warning');
+      return;
+    }
+    setIsPollModalOpen(false);
+    setAnchorEl(null);
+  };
+
+  const handleClosePollModal = () => {
+    setIsPollModalOpen(false);
+    setPollQuestion('');
+    setPollOptions(['', '']);
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
   const handlePollOptionChange = (index: number, value: string) => {
@@ -184,146 +163,178 @@ const CreatePost: React.FC<{ onPostCreated?: () => void }> = ({ onPostCreated })
     setPollOptions(newOptions);
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <ImageIcon />;
-    if (type.startsWith('video/')) return <VideoIcon />;
-    if (type === 'application/pdf') return <PdfIcon />;
-    if (type.includes('word')) return <DocIcon />;
-    if (type.includes('excel')) return <ExcelIcon />;
-    return <FileIcon />;
-  };
-
-  const renderMediaPreview = (preview: { url: string; type: string; name: string }, index: number) => {
-    console.log('Rendering media preview for:', preview);
-
-    return (
-      <div key={index} className={styles.filePreview}>
-        <div className={styles.fileIcon}>
-          {getFileIcon(preview.type)}
-        </div>
-        <Typography variant="body2" className={styles.fileName}>
-          {preview.name}
-        </Typography>
-        <button
-          type="button"
-          className={styles.removeButton}
-          onClick={() => handleRemoveFile(index)}
-        >
-          ×
-        </button>
-      </div>
-    );
-  };
-
   return (
-    <div className={styles.createPost}>
-      <div className={styles.postForm}>
-        <img
-          src={user?.avatar ? `${API_URL}${user.avatar.startsWith('/') ? user.avatar : `/${user.avatar}`}` : '/unknown-user.svg'}
-          alt={user?.nickname}
-          className={styles.avatar}
-        />
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <textarea
-            className={styles.textarea}
-            placeholder="Что происходит?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={showPoll ? 1 : 3}
-          />
-          {showPoll && (
-            <div className={styles.pollInputs}>
-              <TextField
-                fullWidth
-                variant="outlined"
-                label="Вопрос опроса"
-                value={pollQuestion}
-                onChange={(e) => setPollQuestion(e.target.value)}
-                margin="normal"
-                size="small"
-                className={styles.pollInput}
-                sx={{
-                  '& .MuiOutlinedInput-root input': {
-                    color: 'white !important',
-                  },
-                }}
-              />
-              {pollOptions.map((option, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    label={`Вариант ${index + 1}`}
-                    value={option}
-                    onChange={(e) => handlePollOptionChange(index, e.target.value)}
-                    margin="normal"
-                    size="small"
-                    className={styles.pollInput}
-                    sx={{
-                      '& .MuiOutlinedInput-root input': {
-                        color: 'white !important',
-                      },
-                    }}
-                  />
-                  {pollOptions.length > 2 && (
-                    <IconButton onClick={() => handleRemovePollOption(index)} size="small">
-                      ×
-                    </IconButton>
-                  )}
-                </Box>
-              ))}
-              {pollOptions.length < 4 && (
-                <Button 
-                  onClick={handleAddPollOption} 
-                  startIcon={<AddIcon />}
-                  className={styles.addOptionButton}
-                >
-                  Добавить вариант
-                </Button>
-              )}
-            </div>
-          )}
-          {mediaPreview.length > 0 && (
-            <div className={styles.mediaPreview}>
-              {mediaPreview.map((preview, index) => renderMediaPreview(preview, index))}
-            </div>
-          )}
-          <div className={styles.postActions}>
-            <div className={styles.actionButtons}>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept={Object.keys(ACCEPTED_FILE_TYPES).join(',')}
-                multiple
-                style={{ display: 'none' }}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className={styles.actionButton}
-              >
-                <ImageIcon />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPoll(!showPoll)}
-                className={`${styles.actionButton} ${showPoll ? styles.active : ''}`}
-              >
-                <PollIcon />
-              </button>
-            </div>
-            <Button
-              type="submit"
-              className={styles.submitButton}
-              disabled={(!content.trim() && media.length === 0 && (!showPoll || !pollQuestion.trim() || pollOptions.some(opt => !opt.trim()))) || isSubmitting}
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        bgcolor: '#15202b',
+        borderRadius: 1,
+        p: 2,
+        mb: 2,
+        color: 'white'
+      }}
+    >
+      <TextField
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="What's on your mind?"
+        disabled={isSubmitting}
+        multiline
+        rows={3}
+        fullWidth
+        variant="outlined"
+        InputProps={{
+          sx: { color: 'white' },
+        }}
+        sx={{
+          textarea: { color: 'white' },
+          '.MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(255, 255, 255, 0.5)',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'white',
+          },
+          '.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'white',
+          },
+        }}
+      />
+
+      {files.length > 0 && (
+        <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {files.map((file, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 1,
+                p: 1,
+                color: 'white'
+              }}
             >
-              {isSubmitting ? 'Отправка...' : 'Твитнуть'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {getFileIcon(file)}
+              <Typography variant="body2" sx={{ ml: 1, mr: 1, color: 'white' }}>
+                {file.name}
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => handleRemoveFile(index)}
+                sx={{ minWidth: 'auto', p: 0.5, color: 'white' }}
+              >
+                <CloseIcon fontSize="small" />
+              </Button>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button
+          component="label"
+          startIcon={<FileIcon sx={{ color: 'white' }} />}
+          disabled={isSubmitting}
+          sx={{ color: 'white' }}
+        >
+          {'Attach files'}
+          <input
+            type="file"
+            hidden
+            multiple
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          />
+        </Button>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={createPostMutation.isPending || (!content.trim() && files.length === 0 && !pollQuestion.trim())}
+            sx={{
+              bgcolor: 'white',
+              color: '#15202b',
+              '&:hover': {
+                 bgcolor: '#f0f0f0',
+              }
+            }}
+          >
+            {createPostMutation.isPending ? t('posting') : t('post')}
+          </Button>
+
+          <Box sx={{ ml: 'auto' }}>
+            <input
+              type="file"
+              multiple
+              hidden
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            />
+            <IconButton color="primary" onClick={handleFileSelect}>
+              <AddPhotoAlternate />
+            </IconButton>
+            <IconButton color="primary" onClick={handleMenuOpen}>
+              <MoreVert />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+            >
+              <MenuItem onClick={() => { setIsPollModalOpen(true); handleMenuClose(); }}>
+                <Poll sx={{ mr: 1 }} />
+                {t('add_poll')}
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Box>
+      </Box>
+
+      <Dialog open={isPollModalOpen} onClose={handleClosePollModal}>
+        <DialogTitle>{t('create_poll')}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label={t('poll_question')}
+            type="text"
+            fullWidth
+            variant="standard"
+            value={pollQuestion}
+            onChange={(e) => setPollQuestion(e.target.value)}
+          />
+          {pollOptions.map((option, index) => (
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+              <TextField
+                margin="dense"
+                label={`${t('poll_option')} ${index + 1}`}
+                type="text"
+                fullWidth
+                variant="standard"
+                value={option}
+                onChange={(e) => handlePollOptionChange(index, e.target.value)}
+              />
+              {pollOptions.length > 2 && (
+                <IconButton onClick={() => handleRemovePollOption(index)} size="small">
+                  <CloseIcon />
+                </IconButton>
+              )}
+            </Box>
+          ))}
+          <Button onClick={handleAddPollOption} sx={{ mt: 2 }}>
+            {t('add_option')}
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePollModal}>{t('cancel')}</Button>
+          <Button onClick={handleSavePoll}>{t('save')}</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

@@ -1,34 +1,25 @@
 import React from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import {
-  // import Navigation from './components/Navigation'; // Navigation is now handled within Layout
-  // import HomePage from './pages/Home/HomePage'; // Remove HomePage import
-  // import ProfilePage from './pages/Profile/ProfilePage'; // Remove ProfilePage import
-  // import StudyPage from './pages/Study/StudyPage'; // Remove StudyPage import
-  Typography // Import Typography
-} from '@mui/material';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Typography } from '@mui/material';
 import CourseDetails from './pages/Study/CourseDetails';
 import { useAuth } from './contexts/AuthContext';
 import Auth from './pages/Auth';
 import Layout from './components/Layout';
 import Home from './pages/Home';
-// Import components for other sections (assuming they exist and are default exports from index.tsx)
 import Explore from './pages/Explore';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
 import Lists from './pages/Lists';
-import Profile from './pages/Profile'; // Import Profile component
-import More from './pages/More'; // Import the More component for Settings
+import Profile from './pages/Profile';
+import More from './pages/More';
 import { ConferencesPage } from './pages/ConferencesPage';
 import StudyPage from './pages/Study';
 import SubjectDetails from './pages/Study/SubjectDetails';
 import CreateSubjectPage from './pages/Study/CreateSubjectPage';
 import LessonDetails from './pages/Study/LessonDetails';
-import CreateCoursePage from './pages/Study/CreateCoursePage'; // Import CreateCoursePage
-import RoleBasedRoute from './components/RoleBasedRoute'; // Import RoleBasedRoute
-import { UserRole } from './types'; // Import UserRole type
-// Assuming ProfilePage handles both /profile and /profile/me, or create a specific one if needed
-// import MorePage from './pages/More/MorePage'; // Uncomment if a MorePage component exists
+import CreateCoursePage from './pages/Study/CreateCoursePage';
+import RoleBasedRoute from './components/RoleBasedRoute';
+import ChecklistPage from './pages/ChecklistPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -66,6 +57,8 @@ const App: React.FC = () => {
         <Route path="/study/course/:courseId" element={<CourseDetails />} />
         <Route path="/study/subject/:subjectId" element={<SubjectDetails />} />
         <Route path="/study/lesson/:lessonId" element={<LessonDetails />} />
+        <Route path="/conferences" element={<ConferencesPage />} />
+        <Route path="/checklist" element={<ChecklistPage />} /> {/* Route for the Checklist page */}
 
         {/* Role-based protected routes */}
         <Route element={<RoleBasedRoute allowedRoles={['teacher', 'super-admin']} />}>
@@ -74,8 +67,6 @@ const App: React.FC = () => {
         </Route>
 
         <Route path="/settings" element={<More />} /> {/* Use More component for Settings */}
-        <Route path="/conferences" element={<ConferencesPage />} />
-        {/* <Route path="/more" element={<MorePage />} /> */}
       </Route>
 
       {/* Catch-all route */}

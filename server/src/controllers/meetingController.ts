@@ -1,24 +1,35 @@
 import { Request, Response } from 'express';
-import Meeting, { IMeeting } from '../models/Meeting';
-import { generateMeetingId } from '../utils/meetingUtils';
+import Meeting from '../models/Meeting';
+import { AuthenticatedRequest as AuthRequest } from '../types';
+
+interface MeetingData {
+  title: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  participants: string[];
+}
 
 // Get all meetings
-export const getMeetings = async (req: Request, res: Response) => {
+export const getMeetings = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const meetings = await Meeting.find()
-      .populate('courseId', 'title')
-      .populate('createdBy', 'name')
-      .sort({ startTime: 1 });
-
-    const formattedMeetings = meetings.map(meeting => ({
-      ...meeting.toObject(),
-      courseName: meeting.courseId ? (meeting.courseId as any).title : undefined,
-      courseId: meeting.courseId ? (meeting.courseId as any)._id : undefined,
+    const meetings = await Meeting.find().populate('createdBy', 'name nickname');
+    const formattedMeetings = meetings.map((meeting: any) => ({
+      id: meeting._id,
+      title: meeting.title,
+      description: meeting.description,
+      startTime: meeting.startTime,
+      endTime: meeting.endTime,
+      participants: meeting.participants,
+      createdBy: {
+        id: meeting.createdBy._id,
+        name: meeting.createdBy.name,
+        nickname: meeting.createdBy.nickname,
+      },
     }));
-
     res.json(formattedMeetings);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching meetings', error });
+    res.status(500).json({ message: 'Error fetching meetings' });
   }
 };
 
@@ -37,76 +48,90 @@ export const getMeetingsByCourse = async (req: Request, res: Response) => {
 };
 
 // Create a new meeting
-export const createMeeting = async (req: Request, res: Response) => {
+export const createMeeting = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, description, startTime, duration, courseId } = req.body;
-    const meetingId = generateMeetingId();
-    const joinUrl = `${process.env.FRONTEND_URL}/meetings/join/${meetingId}`;
+    const { title, description, startTime, endTime, participants } = req.body as MeetingData;
+
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
 
     const meeting = new Meeting({
       title,
       description,
       startTime,
-      duration,
-      meetingId,
-      joinUrl,
-      courseId,
-      createdBy: req.user._id,
+      endTime,
+      participants,
+      createdBy: req.user.id,
     });
 
     await meeting.save();
     res.status(201).json(meeting);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating meeting', error });
+    res.status(500).json({ message: 'Error creating meeting' });
   }
 };
 
 // Update a meeting
-export const updateMeeting = async (req: Request, res: Response) => {
+export const updateMeeting = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { title, description, startTime, duration } = req.body;
+    const { title, description, startTime, endTime, participants } = req.body as MeetingData;
+
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
 
     const meeting = await Meeting.findById(id);
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      res.status(404).json({ message: 'Meeting not found' });
+      return;
     }
 
-    // Check if user is the creator of the meeting
-    if (meeting.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to update this meeting' });
+    if (meeting.createdBy.toString() !== req.user.id) {
+      res.status(403).json({ message: 'Not authorized to update this meeting' });
+      return;
     }
 
-    const updatedMeeting = await Meeting.findByIdAndUpdate(
-      id,
-      { title, description, startTime, duration },
-      { new: true }
-    );
+    meeting.title = title;
+    meeting.description = description;
+    meeting.startTime = startTime;
+    meeting.endTime = endTime;
+    meeting.participants = participants;
 
-    res.json(updatedMeeting);
+    await meeting.save();
+    res.json(meeting);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating meeting', error });
+    res.status(500).json({ message: 'Error updating meeting' });
   }
 };
 
 // Delete a meeting
-export const deleteMeeting = async (req: Request, res: Response) => {
+export const deleteMeeting = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
     const meeting = await Meeting.findById(id);
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      res.status(404).json({ message: 'Meeting not found' });
+      return;
     }
 
-    // Check if user is the creator of the meeting
-    if (meeting.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to delete this meeting' });
+    if (meeting.createdBy.toString() !== req.user.id) {
+      res.status(403).json({ message: 'Not authorized to delete this meeting' });
+      return;
     }
 
-    await Meeting.findByIdAndDelete(id);
+    await meeting.deleteOne();
     res.json({ message: 'Meeting deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting meeting', error });
+    res.status(500).json({ message: 'Error deleting meeting' });
   }
 }; 

@@ -1,85 +1,82 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Container, Typography, TextField, Button, Box, Alert } from '@mui/material';
-import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  CircularProgress,
+} from '@mui/material';
 import { API_URL } from '../../config';
-import PageLayout from '../../components/PageLayout';
 
-const CreateCoursePage: React.FC = () => {
-  const navigate = useNavigate();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+const CreateCoursePage = () => {
+  const [courseData, setCourseData] = useState({
+    title: '',
+    description: '',
+  });
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    const token = localStorage.getItem('token');
-
-    try {
-      await axios.post(`${API_URL}/api/courses`, {
-        title,
-        description,
-      }, {
+  const createCourseMutation = useMutation({
+    mutationFn: async (data: { title: string; description: string }) => {
+      const response = await fetch(`${API_URL}/api/courses`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
+        body: JSON.stringify(data),
       });
-      setSuccess('Course created successfully!');
-      // Optionally navigate to the new course's detail page or the study page
-      // navigate('/study'); 
-    } catch (err) {
-      console.error('Error creating course:', err);
-      setError('Failed to create course. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      if (!response.ok) {
+        throw new Error('Failed to create course');
+      }
+      return response.json();
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createCourseMutation.mutate(courseData);
   };
 
+  if (createCourseMutation.isPending) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <PageLayout title="Создать курс">
-      <Container maxWidth="sm">
-        <Typography variant="h4" gutterBottom>
-          Создать новый курс
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            label="Название курса"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Описание курса"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            margin="normal"
-            multiline
-            rows={4}
-          />
-          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mt: 2 }}>{success}</Alert>}
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            fullWidth
-            sx={{ mt: 3 }}
-            disabled={loading}
-          >
-            {loading ? 'Создание...' : 'Создать курс'}
-          </Button>
-        </Box>
-      </Container>
-    </PageLayout>
+    <Box>
+      <Typography variant="h4">Create New Course</Typography>
+      <form onSubmit={handleSubmit}>
+        <TextField
+          fullWidth
+          label="Course Title"
+          value={courseData.title}
+          onChange={(e) => setCourseData({ ...courseData, title: e.target.value })}
+          margin="normal"
+          required
+        />
+        <TextField
+          fullWidth
+          label="Course Description"
+          value={courseData.description}
+          onChange={(e) => setCourseData({ ...courseData, description: e.target.value })}
+          margin="normal"
+          multiline
+          rows={4}
+          required
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          disabled={createCourseMutation.isPending}
+        >
+          Create Course
+        </Button>
+      </form>
+    </Box>
   );
 };
 

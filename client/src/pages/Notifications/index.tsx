@@ -1,163 +1,116 @@
-import { useState, useEffect } from 'react'
-import { Box, Typography, List, ListItem, Avatar, Button, IconButton, Divider, Tabs, Tab } from '@mui/material'
-import { formatDistanceToNow } from 'date-fns'
-import { ru } from 'date-fns/locale'
-import { API_URL } from '../../config'
-import { useNavigate } from 'react-router-dom'
-import FavoriteIcon from '@mui/icons-material/Favorite'
-import RepeatIcon from '@mui/icons-material/Repeat'
-import CommentIcon from '@mui/icons-material/Comment'
-import PersonAddIcon from '@mui/icons-material/PersonAdd'
-import DoneAllIcon from '@mui/icons-material/DoneAll'
-import PageLayout from '../../components/PageLayout'
-import { useTranslation } from 'react-i18next'
+import React, { useState } from 'react';
+import { Box, Typography, List, ListItem, Avatar, Divider, Tabs, Tab, CircularProgress } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { API_URL } from '../../config';
+import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import CommentIcon from '@mui/icons-material/Comment';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import PageLayout from '../../components/PageLayout';
+import { useTranslation } from 'react-i18next';
 
 interface Notification {
-  id: number
-  type: 'LIKE' | 'RETWEET' | 'COMMENT' | 'FOLLOW'
-  isRead: boolean
-  createdAt: string
+  id: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+  type: 'mention' | 'like' | 'comment' | 'follow';
   actor: {
-    id: number
-    nickname: string
-    avatar: string
-  }
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
   post?: {
-    id: number
-    content: string
-  }
+    id: string;
+    content: string;
+  };
   comment?: {
-    id: number
-    content: string
-  }
+    id: string;
+    content: string;
+  };
 }
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [currentTab, setCurrentTab] = useState(0)
-  const navigate = useNavigate()
-  const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState(0);
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch(`${API_URL}/notifications`, {
+  const { data: notifications, isLoading } = useQuery<Notification[]>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data)
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    }
-  }
+      return response.json();
+    },
+  });
 
-  const markAsRead = async (id: number) => {
-    try {
-      const response = await fetch(`${API_URL}/notifications/${id}/read`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      if (response.ok) {
-        setNotifications(notifications.map(notification =>
-          notification.id === id ? { ...notification, isRead: true } : notification
-        ))
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error)
-    }
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
   }
-
-  const markAllAsRead = async () => {
-    try {
-      const response = await fetch(`${API_URL}/notifications/read-all`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      if (response.ok) {
-        setNotifications(notifications.map(notification => ({ ...notification, isRead: true })))
-      }
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error)
-    }
-  }
-
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setCurrentTab(newValue)
-    // TODO: Implement filtering based on tab (e.g., Mentions)
-    // For now, both tabs show all notifications
-  }
+    setActiveTab(newValue);
+  };
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'LIKE':
-        return <FavoriteIcon color="error" />
-      case 'RETWEET':
-        return <RepeatIcon color="primary" />
-      case 'COMMENT':
-        return <CommentIcon color="info" />
-      case 'FOLLOW':
-        return <PersonAddIcon color="success" />
+      case 'like':
+        return <FavoriteIcon color="error" />;
+      case 'comment':
+        return <CommentIcon color="info" />;
+      case 'follow':
+        return <PersonAddIcon color="success" />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const getNotificationText = (notification: Notification) => {
     switch (notification.type) {
-      case 'LIKE':
-        return t('liked_your_post')
-      case 'RETWEET':
-        return t('retweeted_your_post')
-      case 'COMMENT':
-        return t('commented_on_your_post')
-      case 'FOLLOW':
-        return t('followed_you')
+      case 'like':
+        return t('liked_your_post');
+      case 'comment':
+        return t('commented_on_your_post');
+      case 'follow':
+        return t('followed_you');
       default:
-        return ''
+        return '';
     }
-  }
+  };
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.isRead) {
-      markAsRead(notification.id)
-    }
-    
     if (notification.post) {
-      navigate(`/post/${notification.post.id}`)
+      navigate(`/post/${notification.post.id}`);
     } else if (notification.actor) {
-      navigate(`/profile/${notification.actor.nickname}`)
+      navigate(`/profile/${notification.actor.nickname}`);
     }
-  }
+  };
 
-  // Filter notifications based on the current tab (basic implementation)
-  const filteredNotifications = notifications.filter(notification => {
-    if (currentTab === 0) return true; // All tab
-    if (currentTab === 1) {
-      // Mentions tab: Assuming a mention implies a comment or a post reply where user is tagged
-      // This requires server-side support for mentions or more complex client-side logic
-      // For this basic implementation, we'll show comments as potential mentions.
-      return notification.type === 'COMMENT';
-    }
+  const filteredNotifications = notifications?.filter((notification) => {
+    if (activeTab === 0) return true; // All tab
+    if (activeTab === 1) return notification.type === 'mention';
+    if (activeTab === 2) return notification.type === 'like';
     return true;
-  })
+  }) ?? [];
 
   return (
     <PageLayout title={t('notifications')}>
       <Box>
-        <Tabs value={currentTab} onChange={handleTabChange} aria-label="notification tabs" centered sx={{ width: '100%' }}>
+        <Tabs value={activeTab} onChange={handleTabChange} aria-label="notification tabs" centered sx={{ width: '100%' }}>
           <Tab label={t('all')} sx={{ flexGrow: 1 }} />
           <Tab label={t('mentions')} sx={{ flexGrow: 1 }} />
+          <Tab label={t('likes')} sx={{ flexGrow: 1 }} />
         </Tabs>
         <List>
           {filteredNotifications.map((notification, index) => (
@@ -201,7 +154,6 @@ const Notifications = () => {
                     <Typography variant="caption" color="text.secondary">
                       {formatDistanceToNow(new Date(notification.createdAt), {
                         addSuffix: true,
-                        locale: ru
                       })}
                     </Typography>
                   </Box>
@@ -218,7 +170,7 @@ const Notifications = () => {
         </List>
       </Box>
     </PageLayout>
-  )
-}
+  );
+};
 
-export default Notifications 
+export default Notifications; 

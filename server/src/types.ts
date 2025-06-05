@@ -1,5 +1,5 @@
 import { Request } from 'express'
-import { UserRole } from './types/database'; // Assuming UserRole is defined here
+import { User } from './types/database';
 
 export interface AuthenticatedRequest extends Request {
   user?: { 
@@ -7,3 +7,5 @@ export interface AuthenticatedRequest extends Request {
     role?: string; // Изменяем тип role на строку
   }
 } 
+
+export type { User }; 

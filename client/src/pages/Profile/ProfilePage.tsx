@@ -9,7 +9,6 @@ import {
   Button,
   Avatar,
   Alert,
-  Divider,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import PageLayout from '../../components/PageLayout';

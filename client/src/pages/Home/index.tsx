@@ -1,4 +1,3 @@
-import React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNotification } from '../../contexts/NotificationContext'
 import styles from './Home.module.css'
@@ -8,7 +7,6 @@ import Post from '../../components/Post'
 import { API_URL } from '../../config'
 import { Box, Typography, CircularProgress } from '@mui/material'
 import { Post as PostType } from '../../types'
-import { useTranslation } from 'react-i18next'
 
 interface Post {
   id: string
@@ -38,8 +36,6 @@ interface Post {
 const Home = () => {
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
-  const backendApiUrl = API_URL
-  const { t } = useTranslation()
 
   const { data: posts, isLoading, error } = useQuery<PostType[]>({
     queryKey: ['posts'],
@@ -87,11 +83,11 @@ const Home = () => {
       if (!response.ok) throw new Error('Failed to like post')
       queryClient.invalidateQueries({ queryKey: ['posts'] })
     } catch (error) {
-      showNotification(t('error_liking_post'), 'error')
+      showNotification('Error liking post', 'error')
     }
   }
 
-  const handleCommentPost = async (postId: string) => {
+  const handleCommentPost = () => {
     // Открытие модального окна для комментариев происходит в компоненте Post
     queryClient.invalidateQueries({ queryKey: ['posts'] })
   }
@@ -106,9 +102,9 @@ const Home = () => {
       })
       if (!response.ok) throw new Error('Failed to retweet post')
       queryClient.invalidateQueries({ queryKey: ['posts'] })
-      showNotification(t('post_retweeted_successfully'), 'success')
+      showNotification('Post retweeted successfully', 'success')
     } catch (error) {
-      showNotification(t('error_retweeting_post'), 'error')
+      showNotification('Error retweeting post', 'error')
     }
   }
 
@@ -122,16 +118,16 @@ const Home = () => {
       })
       if (!response.ok) throw new Error('Failed to delete post')
       queryClient.invalidateQueries({ queryKey: ['posts'] })
-      showNotification(t('post_deleted_successfully'), 'success')
+      showNotification('Post deleted successfully', 'success')
     } catch (error) {
-      showNotification(t('error_deleting_post'), 'error')
+      showNotification('Error deleting post', 'error')
     }
   }
 
   if (error) {
     return (
       <Box p={2}>
-        <Typography color="error">{t('error_loading_posts')}</Typography>
+        <Typography color="error">{'Failed to load posts.'}</Typography>
       </Box>
     )
   }
@@ -148,17 +144,16 @@ const Home = () => {
 
   if (!posts || posts.length === 0) {
     return (
-      <PageLayout title={t('home')}>
-        <CreatePost />
+      <PageLayout title={'Home'}>
         <div className={styles.noPosts}>
-          {t('no_posts_yet')}
+          {'No posts yet'}
         </div>
       </PageLayout>
     )
   }
 
   return (
-    <PageLayout title={t('home')}>
+    <PageLayout title={'Home'}>
       <CreatePost onPostCreated={() => queryClient.invalidateQueries({ queryKey: ['posts'] })} />
       {posts?.map((post) => {
         console.log('Processing post:', JSON.stringify(post, null, 2))
@@ -179,24 +174,17 @@ const Home = () => {
             key={post.id}
             id={post.id}
             content={post.content}
-            author={{
-              id: post.author.id,
-              nickname: post.author.nickname,
-              avatar: post.author.avatar,
-            }}
+            author={post.author}
             createdAt={post.createdAt}
-            updatedAt={post.updatedAt}
             likes={post.likes}
             commentsCount={post.commentsCount}
             retweetsCount={post.retweetsCount}
-            isLiked={post.isLiked}
-            isRetweeted={post.isRetweeted}
             media={post.media}
+            poll={post.poll}
             onLike={() => handleLikePost(post.id)}
             onRetweet={() => handleRetweetPost(post.id)}
-            onComment={() => handleCommentPost(post.id)}
+            onComment={() => handleCommentPost()}
             onDelete={() => handleDeletePost(post.id)}
-            poll={post.poll}
           />
         )
       })}

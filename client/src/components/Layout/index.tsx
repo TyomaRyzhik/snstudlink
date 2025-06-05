@@ -6,9 +6,11 @@ const Layout = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
-      <Outlet />
+      <Box component="main" sx={{ flexGrow: 1, p: 3, overflowY: 'auto', marginLeft: 0 }}>
+        <Outlet />
+      </Box>
     </Box>
   )
 }
 
-export default Layout 
+export default Layout

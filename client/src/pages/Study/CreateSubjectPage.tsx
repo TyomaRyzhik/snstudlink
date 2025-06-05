@@ -39,7 +39,7 @@ const CreateSubjectPage: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Error creating subject:', error);
-      setError(error.response?.data?.message || 'Failed to create subject. Please try again.');
+      setError(error.response?.data?.message || t('failed_to_create_subject'));
     },
   });
 
@@ -48,7 +48,7 @@ const CreateSubjectPage: React.FC = () => {
     setError(null);
 
     if (!title.trim()) {
-      setError('Subject title is required');
+      setError(t('subject_title_required'));
       return;
     }
 

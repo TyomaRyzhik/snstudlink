@@ -17,7 +17,7 @@ import axios from 'axios';
 import SubjectCard from '../../components/SubjectCard';
 import { Subject } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next';
 
 // Study Page component to display list of subjects
 const StudyPage: React.FC = () => {
@@ -29,7 +29,7 @@ const StudyPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   const { data: subjects, isLoading, error } = useQuery<Subject[]>({
     queryKey: ['subjects'],

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 const More = () => {
   const { mode, toggleTheme } = useTheme()
   const { t, i18n } = useTranslation()
-  const [language, setLanguage] = useState(i18n.language) // Default language from i18n
+  const [language, setLanguage] = useState(i18n.language)
 
   const handleLanguageChange = (event: any) => {
     const selectedLanguage = event.target.value as string
@@ -34,7 +34,7 @@ const More = () => {
 
         <Divider sx={{ mb: 4 }} />
 
-        <Box>
+        <Box sx={{ mb: 4 }}>
           <Typography variant="subtitle1" gutterBottom>
             {t('language')}
           </Typography>
@@ -49,7 +49,6 @@ const More = () => {
             >
               <MenuItem value="ru">Русский</MenuItem>
               <MenuItem value="en">English</MenuItem>
-              {/* Add more languages as needed */}
             </Select>
           </FormControl>
         </Box>

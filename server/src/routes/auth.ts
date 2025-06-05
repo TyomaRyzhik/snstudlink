@@ -79,17 +79,25 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body
+    console.log('Login attempt:', { email });
 
     // Find user
     const user = await userRepository.findByEmail(email)
+    console.log('User found:', user ? 'Yes' : 'No');
+    
     if (!user) {
+      console.log('No user found with email:', email);
       res.status(401).json({ message: 'Invalid credentials' })
       return
     }
 
     // Check password
+    console.log('Comparing passwords...');
     const isValidPassword = await compare(password, user.password)
+    console.log('Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('Invalid password for user:', email);
       res.status(401).json({ message: 'Invalid credentials' })
       return
     }
@@ -104,6 +112,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       }
     )
 
+    console.log('Login successful for user:', email);
     res.json({
       message: 'Logged in successfully',
       token,

@@ -1,108 +1,116 @@
 import React from 'react';
-import styles from './RecentPostsSidebar.module.css';
+import { Box, Typography, CircularProgress, Divider } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '../../config';
-import { Box, Typography, CircularProgress } from '@mui/material';
-import { Post as PostType } from '../../types';
-import Post from '../Post'; // Reuse the Post component for rendering
-import { Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import axios from 'axios';
+import { useTranslation } from 'react-i18next';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-function toCamelCase(obj: any): any {
-  if (Array.isArray(obj)) {
-    return obj.map(v => toCamelCase(v));
-  } else if (obj !== null && typeof obj === 'object') {
-    return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) => [
-        k.replace(/_([a-z])/g, g => g[1].toUpperCase()),
-        toCamelCase(v)
-      ])
-    );
-  }
-  return obj;
+interface Post {
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
+  createdAt: string;
 }
 
 const RecentPostsSidebar = () => {
-  const { data: posts, isLoading, error } = useQuery<PostType[]>({
-    queryKey: ['recentPosts'], // Use a different query key
+  const { t } = useTranslation();
+  
+  const { data: posts, isLoading, error } = useQuery<Post[]>({
+    queryKey: ['recentPosts'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/posts/feed`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
+      try {
+        const { data } = await axios.get(`${API_URL}/api/posts/feed`);
+        // Возвращаем только последние 3 поста
+        return data.slice(0, 3);
+      } catch (error) {
+        console.error('Error fetching recent posts:', error);
         throw new Error('Failed to fetch recent posts');
       }
-      const data = await response.json();
-      console.log('Raw data from /api/posts/feed:', data);
-      // Optionally, limit the number of posts here or in the backend
-      const camelCaseData = toCamelCase(data);
-      console.log('Data after toCamelCase:', camelCaseData);
-      return camelCaseData.slice(0, 5); // Limit to 5 recent posts
     },
   });
 
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100px">
-        <CircularProgress size={20} />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box p={1}>
-        <Typography color="error" variant="body2">Ошибка загрузки постов</Typography>
-      </Box>
-    );
-  }
-
-  if (!posts || posts.length === 0) {
-    return (
-      <Box p={1}>
-        <Typography variant="body2" sx={{ color: '#71767b' }}>Нет недавних публикаций</Typography>
-      </Box>
-    );
-  }
-
   return (
-    <div className={styles.container}>
-      <h3>Недавние публикации</h3>
-      <div className={styles.postsList}>
-        {posts.map((post) => (
-          // We can reuse the existing Post component, but might need a lighter version
-          // For simplicity now, let's use a basic list item
-          <Link to={`/post/${post.id}`} key={post.id} className={styles.postItemLink}>
-            <div className={styles.postItem}>
-              <div className={styles.postItemHeader}>
-                <Typography variant="body2" className={styles.postAuthorName}>{post.author?.nickname || 'Unknown'}</Typography>
-                <Typography variant="caption" className={styles.postTime}>
-                  {(() => {
-                    try {
-                      const date = new Date(post.createdAt);
-                      if (!post.createdAt || isNaN(date.getTime())) {
-                        return 'Нет даты';
-                      }
-                      return formatDistanceToNow(date, { addSuffix: true, locale: ru });
-                    } catch (error) {
-                      console.error('Error formatting date:', error);
-                      return 'Нет даты';
-                    }
-                  })()}
-                </Typography>
-              </div>
-              <Typography variant="body2" className={styles.postContentSnippet}>
-                {post.content ? `${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}` : ''}
-              </Typography>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
+    <Box
+      sx={{
+        width: 280,
+        flexShrink: 0,
+        ml: 4,
+        py: 2,
+        px: 2,
+        bgcolor: '#192734',
+        borderRadius: 1,
+        color: 'white',
+      }}
+    >
+      <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold', mb: 2 }}>
+        {t('recent_publications')}
+      </Typography>
+
+      {isLoading && (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
+          <CircularProgress sx={{ color: 'white' }} />
+        </Box>
+      )}
+
+      {error && (
+        <Typography color="error" variant="body2" align="center" sx={{ color: 'red' }}>
+          {t('failed_to_load_recent_posts')}
+        </Typography>
+      )}
+
+      {!isLoading && !error && (!posts || posts.length === 0) && (
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ color: '#8899a6' }}>
+          {t('no_recent_posts')}
+        </Typography>
+      )}
+
+      {!isLoading && !error && posts && posts.length > 0 && (
+        <Box>
+          {posts.map((post, index) => {
+            const createdAtDate = new Date(post.createdAt);
+            const isValidDate = !isNaN(createdAtDate.getTime());
+            const formattedDate = isValidDate
+              ? formatDistanceToNowStrict(createdAtDate, { addSuffix: true, locale: ru })
+              : '';
+
+            return (
+              <React.Fragment key={post.id}>
+                <Box
+                  sx={{
+                    mb: index === posts.length - 1 ? 0 : 2,
+                    pt: index === 0 ? 0 : 1,
+                    pb: 1,
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" sx={{ color: '#8899a6', display: 'flex', alignItems: 'center', fontWeight: 'normal', mb: 0.5 }}>
+                    {post.author.nickname}
+                    {formattedDate && (
+                      <>
+                        <Box component="span" sx={{ mx: 0.5 }}>&middot;</Box>
+                        {formattedDate}
+                      </>
+                    )}
+                  </Typography>
+                  <Typography variant="body1" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', color: 'white' }}>
+                    {post.content}
+                  </Typography>
+                </Box>
+                {index < posts.length - 1 && <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', my: 1 }} />}
+              </React.Fragment>
+            );
+          })}
+        </Box>
+      )}
+    </Box>
   );
 };
 

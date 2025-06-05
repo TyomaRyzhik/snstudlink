@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FavoriteBorder as FavoriteIcon,
   ChatBubbleOutline as CommentIcon,
   Repeat as RetweetIcon,
   Share as ShareIcon,
@@ -10,7 +9,6 @@ import {
   PictureAsPdf as PdfIcon,
   Description as DocIcon,
   TableChart as ExcelIcon,
-  VideoFile as VideoIcon,
   InsertDriveFile as FileIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
@@ -24,7 +22,6 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import Modal from '../Modal';
 import Textarea from '../Textarea';
 import Button from '../Button';
-import { Box, Typography, LinearProgress } from '@mui/material';
 
 interface PostProps {
   id: string;
@@ -44,7 +41,6 @@ interface PostProps {
   commentsCount?: number;
   retweetsCount?: number;
   createdAt: string;
-  updatedAt?: string;
   isRetweeted?: boolean;
   isLiked?: boolean;
   onLike?: () => void;
@@ -84,7 +80,6 @@ const Post: React.FC<PostProps> = ({
   commentsCount = 0,
   retweetsCount = 0,
   createdAt,
-  updatedAt,
   isRetweeted: initialIsRetweeted = false,
   isLiked: initialIsLiked = false,
   onLike,
@@ -95,22 +90,16 @@ const Post: React.FC<PostProps> = ({
 }) => {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(initialIsLiked);
-  const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isRetweeted, setIsRetweeted] = useState(initialIsRetweeted);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPollOption, setSelectedPollOption] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [pollResults, setPollResults] = useState<{ text: string; votes: number; percentage: number; voterIds?: string[] }[]>([]);
-  const [pollOptions, setPollOptions] = useState<{ text: string; votes: number; percentage: number; voterIds?: string[] }[]>([]);
 
-  // Загрузка комментариев при открытии модалки
   useEffect(() => {
     if (isCommentModalOpen) {
       fetch(`${API_URL}/api/posts/${id}/comments`, {
@@ -124,7 +113,6 @@ const Post: React.FC<PostProps> = ({
     }
   }, [isCommentModalOpen, id]);
 
-  // Calculate poll results and check if user has voted
   useEffect(() => {
     if (poll && user) {
       const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
@@ -134,37 +122,33 @@ const Post: React.FC<PostProps> = ({
       }));
       setPollResults(results);
 
-      // Проверяем, голосовал ли пользователь изначальными данными поста
       let userVotedForOption = false;
       let votedOptionIndex: number | null = null;
 
       for (let i = 0; i < poll.options.length; i++) {
-          const option = poll.options[i];
-          if (option.voterIds?.includes(user.id)) {
-              userVotedForOption = true;
-              votedOptionIndex = i;
-              break;
-          }
+        const option = poll.options[i];
+        if (option.voterIds?.includes(user.id)) {
+          userVotedForOption = true;
+          votedOptionIndex = i;
+          break;
+        }
       }
 
       setHasVoted(userVotedForOption);
       setSelectedPollOption(votedOptionIndex);
-
     } else if (poll) {
-       // Для неавторизованных пользователей или без данных пользователя
-       const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
-       const results = poll.options.map(option => ({
-         ...option,
-         percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0
-       }));
-       setPollResults(results);
-       setHasVoted(false);
-       setSelectedPollOption(null);
+      const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+      const results = poll.options.map(option => ({
+        ...option,
+        percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0
+      }));
+      setPollResults(results);
+      setHasVoted(false);
+      setSelectedPollOption(null);
     } else {
-       // Для постов без опроса
-       setPollResults([]);
-       setHasVoted(false);
-       setSelectedPollOption(null);
+      setPollResults([]);
+      setHasVoted(false);
+      setSelectedPollOption(null);
     }
   }, [poll, user]);
 
@@ -176,8 +160,6 @@ const Post: React.FC<PostProps> = ({
 
     try {
       setIsLoading(true);
-      setError(null);
-
       const response = await fetch(`${API_URL}/api/posts/${id}/like`, {
         method: 'POST',
         headers: {
@@ -190,12 +172,10 @@ const Post: React.FC<PostProps> = ({
         throw new Error('Failed to like post');
       }
 
-      const data = await response.json();
       setIsLiked(!isLiked);
       onLike?.();
       showNotification(isLiked ? 'Лайк убран' : 'Лайк добавлен', 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to like post');
       showNotification('Failed to like post', 'error');
     } finally {
       setIsLoading(false);
@@ -225,7 +205,6 @@ const Post: React.FC<PostProps> = ({
         throw new Error('Failed to repost');
       }
 
-      const data = await response.json();
       setIsRetweeted(true);
       showNotification('Публикация успешно репостнута', 'success');
       onRetweet?.();
@@ -253,10 +232,8 @@ const Post: React.FC<PostProps> = ({
       });
       if (!response.ok) throw new Error('Failed to add comment');
       
-      const data = await response.json();
       setCommentText('');
       
-      // Обновляем список комментариев
       const commentsRes = await fetch(`${API_URL}/api/posts/${id}/comments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -265,7 +242,6 @@ const Post: React.FC<PostProps> = ({
       const commentsData = await commentsRes.json();
       setComments(commentsData);
       
-      // Обновляем счетчик комментариев
       onComment?.();
       
       setIsCommentModalOpen(false);
@@ -346,13 +322,11 @@ const Post: React.FC<PostProps> = ({
       return;
     }
 
-    // Проверяем, голосовал ли пользователь уже, используя актуальные данные из poll state
-    // Ищем пользователя в voterIds любой из опций
     const hasVotedCheck = pollResults.some(option => option.voterIds?.includes(user.id));
 
     if (hasVotedCheck) {
-         showNotification('You have already voted.', 'info');
-         return;
+      showNotification('You have already voted.', 'info');
+      return;
     }
 
     try {
@@ -372,31 +346,27 @@ const Post: React.FC<PostProps> = ({
 
       const data = await response.json();
       
-      // Обновляем состояние после успешного голосования на основе данных с сервера
-       if (data.poll) {
-         // Находим индекс опции, за которую проголосовал пользователь в обновленных данных
-         let votedOptionIndex: number | null = null;
-         for (let i = 0; i < data.poll.options.length; i++) {
-             const option = data.poll.options[i];
-             if (option.voterIds?.includes(user.id)) {
-                 votedOptionIndex = i;
-                 break;
-             }
-         }
-          setHasVoted(votedOptionIndex !== null); // Пользователь проголосовал, если найден votedOptionIndex
-          setSelectedPollOption(votedOptionIndex); // Устанавливаем выбранный вариант
-          
-         // Обновляем результаты опроса
+      if (data.poll) {
+        let votedOptionIndex: number | null = null;
+        for (let i = 0; i < data.poll.options.length; i++) {
+          const option = data.poll.options[i];
+          if (option.voterIds?.includes(user.id)) {
+            votedOptionIndex = i;
+            break;
+          }
+        }
+        setHasVoted(votedOptionIndex !== null);
+        setSelectedPollOption(votedOptionIndex);
+        
         const totalVotes = data.poll.options.reduce((sum: number, option: { votes: number }) => sum + option.votes, 0);
         const updatedOptions = data.poll.options.map((option: { text: string; votes: number; voterIds?: string[] }) => ({
           ...option,
           percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
         }));
         setPollResults(updatedOptions);
-       }
+      }
 
       showNotification(data.message, 'success');
-
     } catch (error) {
       console.error('Vote error:', error);
       showNotification((error as Error).message, 'error');
@@ -409,19 +379,17 @@ const Post: React.FC<PostProps> = ({
       return;
     }
 
-    // Проверяем, голосовал ли пользователь вообще, используя актуальные данные из poll state
-     const hasVotedCheck = pollResults.some(option => option.voterIds?.includes(user.id));
+    const hasVotedCheck = pollResults.some(option => option.voterIds?.includes(user.id));
     
     if (!hasVotedCheck) {
-        showNotification('You have not voted in this poll.', 'info');
-        return;
+      showNotification('You have not voted in this poll.', 'info');
+      return;
     }
 
     try {
       const response = await fetch(`${API_URL}/api/posts/${id}/poll/cancel-vote`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
@@ -433,45 +401,29 @@ const Post: React.FC<PostProps> = ({
 
       const data = await response.json();
       
-      // Обновляем состояние после успешной отмены голоса на основе данных с сервера
       if (data.poll) {
-          // Проверяем, остался ли пользователь в voterIds какой-либо опции (должен быть удален)
-          const hasVotedAfterCancel = data.poll.options.some((option: { voterIds?: string[] }) => option.voterIds?.includes(user.id));
-          setHasVoted(hasVotedAfterCancel); // Устанавливаем hasVoted в false, если пользователь удален
-          setSelectedPollOption(null); // Сбрасываем выбранный вариант
+        const hasVotedAfterCancel = data.poll.options.some((option: { voterIds?: string[] }) => option.voterIds?.includes(user.id));
+        setHasVoted(hasVotedAfterCancel);
+        setSelectedPollOption(null);
 
-          // Обновляем результаты опроса
-          const totalVotes = data.poll.options.reduce((sum: number, option: { votes: number }) => sum + option.votes, 0);
-          const updatedOptions = data.poll.options.map((option: { text: string; votes: number; voterIds?: string[] }) => ({
-            ...option,
-            percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
-          }));
-          setPollResults(updatedOptions);
+        const totalVotes = data.poll.options.reduce((sum: number, option: { votes: number }) => sum + option.votes, 0);
+        const updatedOptions = data.poll.options.map((option: { text: string; votes: number; voterIds?: string[] }) => ({
+          ...option,
+          percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
+        }));
+        setPollResults(updatedOptions);
       }
 
       showNotification(data.message, 'success');
-
     } catch (error) {
       console.error('Cancel vote error:', error);
       showNotification((error as Error).message, 'error');
     }
   };
 
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return <ImageIcon />;
-    if (['mp4', 'mov', 'avi'].includes(ext)) return <VideoIcon />;
-    if (ext === 'pdf') return <PdfIcon />;
-    if (['doc', 'docx'].includes(ext)) return <DocIcon />;
-    if (['xls', 'xlsx'].includes(ext)) return <ExcelIcon />;
-    return <FileIcon />;
-  };
-
   const renderMedia = (mediaItem: { path: string; type: string } | string, index: number) => {
     const [imgError, setImgError] = useState(false);
-    // Check if mediaItem is a string or an object
     const mediaPath = typeof mediaItem === 'string' ? mediaItem : mediaItem.path;
-    // We might not have type if it's just a string path, assume file type from extension
     const mediaType = typeof mediaItem === 'string' ? 'file' : mediaItem.type;
     
     const ext = mediaPath.split('.').pop()?.toLowerCase() || '';
@@ -479,7 +431,6 @@ const Post: React.FC<PostProps> = ({
     const isPdf = ext === 'pdf';
     const isDoc = ['doc', 'docx'].includes(ext);
     const isExcel = ['xls', 'xlsx'].includes(ext);
-    const isVideo = mediaType === 'video' || ['mp4', 'mov', 'avi'].includes(ext);
     const fileName = mediaPath.split('/').pop() || mediaPath;
 
     const handleDownload = () => {
@@ -521,23 +472,6 @@ const Post: React.FC<PostProps> = ({
             <Icon />
           </div>
           <span className={styles.fileName}>{fileName}</span>
-          <button onClick={handleDownload} className={styles.downloadButton}>
-            <DownloadIcon />
-          </button>
-        </div>
-      );
-    } else if (isVideo) {
-      const videoUrl = `${API_URL}${mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`}`;
-      return (
-        <div key={index} className={styles.mediaItem}>
-          <video 
-            controls 
-            src={videoUrl} 
-            className={styles.mediaPreviewImage}
-            onError={(e) => {
-              console.error('Video load error for URL:', videoUrl, e);
-            }}
-          />
           <button onClick={handleDownload} className={styles.downloadButton}>
             <DownloadIcon />
           </button>
@@ -600,7 +534,6 @@ const Post: React.FC<PostProps> = ({
             </div>
           )}
 
-          {/* Display Poll if exists */}
           {poll && (
             <div className={styles.pollContainer}>
               <h4 className={styles.pollQuestion} style={{ color: 'white' }}>{poll.question}</h4>

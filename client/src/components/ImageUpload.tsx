@@ -1,7 +1,7 @@
+import React from 'react'
 import { useState, useRef } from 'react'
 import { Box, IconButton, Typography, CircularProgress } from '@mui/material'
 import { Image as ImageIcon } from '@mui/icons-material'
-import { API_URL } from '../../config'
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void

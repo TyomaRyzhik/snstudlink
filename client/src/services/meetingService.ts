@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from '../api';
 
 export interface Meeting {
   _id: string;
@@ -62,5 +62,10 @@ export const meetingService = {
   // Delete a meeting
   deleteMeeting: async (id: string): Promise<void> => {
     await api.delete(`/meetings/${id}`);
+  },
+
+  joinMeeting: async (meetingId: string) => {
+    const response = await api.post(`/meetings/${meetingId}/join`);
+    return response.data;
   },
 }; 

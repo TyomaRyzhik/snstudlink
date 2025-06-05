@@ -1,6 +1,22 @@
 import { Request } from 'express'
-import { User } from '../entities/User'
- 
+
 export interface AuthRequest extends Request {
-  user?: User
+  user?: {
+    id: string;
+    role?: string;
+  }
+}
+
+export interface UserResponse {
+  id: string;
+  name: string;
+  nickname: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  banner?: string;
+  about?: string;
+  user_group?: string;
+  followers: string[];
+  following: string[];
 } 

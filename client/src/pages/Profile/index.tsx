@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Box,
-  Paper,
   Typography,
   Avatar,
   Button,
@@ -107,35 +106,18 @@ const Profile = ({ isMe = false }: ProfileProps) => {
   // Выбор эндпоинта и ключа для useQuery
   const userQueryKey = isMe ? ['user', 'me'] : ['user', id];
   const userQueryFn = async () => {
-    if (isMe) {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/users/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (response.ok) {
+    try {
+      if (isMe) {
+        const { data } = await axios.get(`${API_URL}/api/users/me`);
         setUser(data);
         return data;
       } else {
-        console.error('Error fetching user data:', data.message);
-        return null;
-      }
-    } else {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/users/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (response.ok) {
+        const { data } = await axios.get(`${API_URL}/api/users/${id}`);
         return data;
-      } else {
-        console.error('Error fetching user data:', data.message);
-        return null;
       }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
     }
   };
 
@@ -156,12 +138,17 @@ const Profile = ({ isMe = false }: ProfileProps) => {
 
   const postsQueryKey = isMe ? ['posts', 'user', 'me'] : ['posts', 'user', id];
   const postsQueryFn = async () => {
-    if (isMe) {
-      const { data } = await axios.get(`${API_URL}/api/posts/user/me`);
-      return data;
-    } else {
-      const { data } = await axios.get(`${API_URL}/api/posts/user/${id}`);
-      return data;
+    try {
+      if (isMe) {
+        const { data } = await axios.get(`${API_URL}/api/posts/user/me`);
+        return data;
+      } else {
+        const { data } = await axios.get(`${API_URL}/api/posts/user/${id}`);
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      return [];
     }
   };
 
@@ -171,32 +158,20 @@ const Profile = ({ isMe = false }: ProfileProps) => {
     enabled: isMe ? !!currentUser : !!id,
   });
 
-  // Функция для обновления постов пользователя после действия
-  const handlePostActionSuccessForProfile = () => {
-    queryClient.invalidateQueries({ queryKey: postsQueryKey });
-  };
-
   const followUser = useMutation({
     mutationFn: async () => {
       if (!id) return;
-      const { data } = await axios.post(`/api/users/${id}/follow`)
-      return data
+      await axios.post(`/api/users/${id}/follow`)
     },
-    onSuccess: (data) => {
-      // Обновляем данные пользователя в кэше с новым статусом подписки
+    onSuccess: () => {
       queryClient.setQueryData(['user', id], (oldUser: User | undefined) => {
         if (!oldUser) return undefined;
-        // Используем currentUser?.id вместо data.currentUserId
         const currentUserId = currentUser?.id;
-        if (!currentUserId) return oldUser; // Не обновляем, если нет текущего пользователя
+        if (!currentUserId) return oldUser;
 
-        const updatedFollowers = data.isFollowing
-          ? [...oldUser.followers, { id: currentUserId }] // Добавляем текущего пользователя в подписчики
-          : oldUser.followers.filter(follower => follower.id !== currentUserId); // Удаляем текущего пользователя из подписчиков
-
+        const updatedFollowers = [...oldUser.followers, { id: currentUserId }];
         return { ...oldUser, followers: updatedFollowers };
       });
-      // Возможно, также потребуется обновить данные текущего пользователя, чтобы отобразить изменения в списке подписок
       queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
     },
   })
@@ -204,22 +179,17 @@ const Profile = ({ isMe = false }: ProfileProps) => {
   const unfollowUser = useMutation({
     mutationFn: async () => {
       if (!id) return;
-      const { data } = await axios.post(`/api/users/${id}/unfollow`)
-      return data
+      await axios.post(`/api/users/${id}/unfollow`)
     },
-    onSuccess: (data) => {
-      // Обновляем данные пользователя в кэше после отписки
-       queryClient.setQueryData(['user', id], (oldUser: User | undefined) => {
+    onSuccess: () => {
+      queryClient.setQueryData(['user', id], (oldUser: User | undefined) => {
         if (!oldUser) return undefined;
-        // Используем currentUser?.id вместо data.currentUserId
         const currentUserId = currentUser?.id;
-         if (!currentUserId) return oldUser; // Не обновляем, если нет текущего пользователя
+        if (!currentUserId) return oldUser;
 
-        const updatedFollowers = oldUser.followers.filter(follower => follower.id !== currentUserId); // Удаляем текущего пользователя из подписчиков
-
+        const updatedFollowers = oldUser.followers.filter(follower => follower.id !== currentUserId);
         return { ...oldUser, followers: updatedFollowers };
       });
-       // Возможно, также потребуется обновить данные текущего пользователя
       queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
     },
   })
@@ -447,22 +417,12 @@ const Profile = ({ isMe = false }: ProfileProps) => {
                     key={post.id}
                     id={post.id}
                     content={post.content}
-                    author={{
-                      id: post.author.id,
-                      nickname: post.author.nickname,
-                      avatar: post.author.avatar,
-                    }}
+                    author={post.author}
                     createdAt={post.createdAt}
-                    updatedAt={post.updatedAt}
                     likes={post.likes}
                     commentsCount={post.commentsCount}
                     retweetsCount={post.retweetsCount}
-                    isLiked={post.isLiked}
-                    isRetweeted={post.isRetweeted}
                     media={post.media}
-                    onLike={handlePostActionSuccessForProfile}
-                    onRetweet={handlePostActionSuccessForProfile}
-                    onComment={handlePostActionSuccessForProfile}
                     poll={post.poll}
                   />
                 ))}

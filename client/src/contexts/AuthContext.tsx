@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         body: JSON.stringify({ name, nickname, email, password, user_group }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
       }
       setUser(data.user);

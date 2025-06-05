@@ -1,44 +1,55 @@
 import { useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import styles from './Profile.module.css'
-import { Button, Modal, TextField, Box } from '@mui/material'
+import { useQuery } from '@tanstack/react-query'
+import { Box, Typography, CircularProgress } from '@mui/material'
+import { getUserProfile } from '../../services/api'
+import styles from './Me.module.css'
+import { Button, Modal, TextField } from '@mui/material'
 
-const ProfileMe = () => {
-  const { user: currentUser } = useAuth()
-  const user = currentUser
-  const isOwner = true
+const Me = () => {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['user', 'me'],
+    queryFn: () => getUserProfile('me'),
+  })
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editedBannerUrl, setEditedBannerUrl] = useState(user?.bannerUrl || '')
-  const [editedAvatarUrl, setEditedAvatarUrl] = useState(user?.avatarUrl || '')
+  const [editedAvatarUrl, setEditedAvatarUrl] = useState(user?.avatar || '')
   const [editedBio, setEditedBio] = useState(user?.bio || '')
 
-  if (!user) return <div>Загрузка...</div>
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (!user) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <Typography variant="h5">User not found</Typography>
+      </Box>
+    )
+  }
 
   return (
-    <div className={styles.profile}>
-      <div className={styles.header}>
-        <div className={styles.banner}>
-          {user.bannerUrl && <img src={user.bannerUrl} alt="Banner" />}
-        </div>
-        <div className={styles.avatarContainer}>
-          <div className={styles.avatar}>
-            {user.avatarUrl && <img src={user.avatarUrl} alt="Avatar" />}
+    <Box>
+      <div className={styles.profileHeader}>
+        {user.bannerUrl && <img src={user.bannerUrl} alt="Banner" />}
+        <div className={styles.profileInfo}>
+          <img
+            src={user.avatar || '/default-avatar.png'}
+            alt={user.nickname}
+            className={styles.avatar}
+          />
+          <div className={styles.userInfo}>
+            <h2>{user.nickname}</h2>
+            <p className={styles.bio}>{user.bio}</p>
+            <div className={styles.stats}>
+              <span>{user.followingCount || 0} Following</span>
+              <span>{user.followersCount || 0} Followers</span>
+            </div>
           </div>
-          {isOwner && (
-            <Button variant="contained" color="primary" className={styles.editButton} onClick={() => setIsEditModalOpen(true)}>
-              Редактировать профиль
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className={styles.info}>
-        <h1>{user.name}</h1>
-        <p className={styles.username}>@{user.username}</p>
-        <p className={styles.bio}>{user.bio}</p>
-        <div className={styles.stats}>
-          <span>{user.followingCount} Following</span>
-          <span>{user.followersCount} Followers</span>
         </div>
       </div>
       <Modal open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
@@ -72,8 +83,8 @@ const ProfileMe = () => {
           </Button>
         </Box>
       </Modal>
-    </div>
+    </Box>
   )
 }
 
-export default ProfileMe 
+export default Me 

@@ -34,14 +34,13 @@ const Messages = () => {
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   // Ref for message area to enable scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // TODO: Get actual current user ID
   const currentUserId = localStorage.getItem('userId') || '' // Replace with actual logic
-
-  const { t } = useTranslation()
 
   // Fetch conversations
   useEffect(() => {
@@ -172,6 +171,23 @@ const Messages = () => {
         return undefined; // Placeholder for group avatar
     };
 
+  // Placeholder messages or loading indicator
+  if (loadingConversations) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" sx={{ height: 'calc(100vh - 64px)' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={2}>
+        <Typography color="error">{t('error_fetching_conversations')}</Typography>
+      </Box>
+    );
+  }
+
   return (
     <PageLayout title={t('messages')}>
       <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}> {/* Adjust height based on header */}
@@ -185,7 +201,7 @@ const Messages = () => {
                 <CircularProgress />
               </Box>
           ) : error ? (
-              <Typography color="error" sx={{ mt: 2, px: 2 }}>{t('error_loading_conversations')} {error}</Typography>
+              <Typography color="error" sx={{ mt: 2, px: 2 }}>{t('error_fetching_conversations')} {error}</Typography>
           ) : conversations.length === 0 ? (
               <Typography color="text.secondary" sx={{ mt: 2, px: 2 }}>{t('no_conversations_yet')}</Typography>
           ) : (
@@ -197,7 +213,7 @@ const Messages = () => {
                   onClick={() => handleConversationSelect(conversation)}
                   selected={selectedConversation?.id === conversation.id}
                 >
-                  <Avatar src={getConversationAvatar(conversation)} sx={{ mr: 2 }} /> {/* Use getConversationAvatar */}
+                  {selectedConversation && <Avatar src={getConversationAvatar(selectedConversation)} sx={{ mr: 2 }} />}
                   <ListItemText
                     primary={getConversationName(conversation)}
                     secondary={conversation.lastMessage?.content || t('no_messages')}
@@ -210,7 +226,13 @@ const Messages = () => {
 
         {/* Message Area */}
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {selectedConversation ? (
+          {!selectedConversation ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Typography variant="h6" color="text.secondary">
+                {t('select_a_conversation')}
+              </Typography>
+            </Box>
+          ) : (
             <>
               {/* Chat Header */}
               <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
@@ -253,7 +275,7 @@ const Messages = () => {
                 <TextField
                   fullWidth
                   variant="outlined"
-                  placeholder="Введите сообщение..."
+                  placeholder={t('enter_message')}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => { if (e.key === 'Enter') handleSendMessage() }}
@@ -264,10 +286,6 @@ const Messages = () => {
                 </IconButton>
               </Box>
             </>
-          ) : ( // No conversation selected
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Typography variant="h6" color="text.secondary">Выберите беседу</Typography>
-            </Box>
           )}
         </Box>
 
