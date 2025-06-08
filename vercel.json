@@ -12,7 +12,7 @@
     },
     {
       "src": "server/src/index.ts",
-      "use": "@vercel-node",
+      "use": "@vercel/node",
       "config": {
         "buildCommand": "npm run build:server"
       }
