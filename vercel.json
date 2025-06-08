@@ -12,20 +12,15 @@
     },
     {
       "src": "server/src/index.ts",
-      "use": "@vercel/node",
+      "use": "@vercel-node",
       "config": {
         "buildCommand": "npm run build:server"
       }
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/server/src/index.ts"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/server/src/index.ts" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)",     "dest": "/index.html" }
   ]
 }
