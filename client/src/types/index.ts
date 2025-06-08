@@ -43,6 +43,31 @@ export interface File {
   updatedAt: Date;
 }
 
+export interface Post {
+  id: string;
+  content: string;
+  media?: Array<{
+    id: string;
+    type: string;
+    path: string;
+    createdAt: string;
+  }>;
+  author: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
+  likes?: string[];
+  likesCount: number;
+  commentsCount: number;
+  createdAt: string;
+  updatedAt: string;
+  isLiked: boolean;
+  isRetweeted: boolean;
+  poll?: { question: string; options: { text: string; votes: number }[] } | null;
+  retweetsCount?: number;
+}
+
 export interface User {
   id: number;
   email: string;

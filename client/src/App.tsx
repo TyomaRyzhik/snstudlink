@@ -20,6 +20,7 @@ import LessonDetails from './pages/Study/LessonDetails';
 import CreateCoursePage from './pages/Study/CreateCoursePage';
 import RoleBasedRoute from './components/RoleBasedRoute';
 import ChecklistPage from './pages/ChecklistPage';
+import PostDetails from './pages/PostDetails';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -53,6 +54,7 @@ const App: React.FC = () => {
         <Route path="/lists" element={<Lists />} />
         <Route path="/profile/:id" element={<Profile />} /> {/* Use Profile component for dynamic profile route */}
         <Route path="/profile/me" element={<Profile isMe={true} />} /> {/* Use Profile component for current user's profile */}
+        <Route path="/post/:id" element={<PostDetails />} />
         <Route path="/study" element={<StudyPage />} />
         <Route path="/study/course/:courseId" element={<CourseDetails />} />
         <Route path="/study/subject/:subjectId" element={<SubjectDetails />} />

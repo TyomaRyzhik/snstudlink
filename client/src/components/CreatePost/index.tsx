@@ -15,7 +15,6 @@ import {
   Poll,
   MoreVert,
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
 
 interface CreatePostProps {
   onPostCreated?: () => void;
@@ -30,7 +29,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { t } = useTranslation();
+
   const queryClient = useQueryClient();
 
   const createPostMutation = useMutation({
@@ -91,11 +90,11 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
 
       const validFiles = files.filter(file => {
         if (file.size > maxSize) {
-          showNotification(t('some_files_exceed_max_size'), 'warning');
+          showNotification('Некоторые файлы превышают максимальный размер (10MB)', 'warning');
           return false;
         }
         if (!allowedTypes.includes(file.type)) {
-          showNotification(t('some_files_have_unsupported_format'), 'warning');
+          showNotification('Некоторые файлы имеют неподдерживаемый формат', 'warning');
           return false;
         }
         return true;
@@ -130,23 +129,17 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
     setPollOptions(newOptions);
   };
 
-  const handleSavePoll = () => {
+  const handleAddPoll = () => {
     if (!pollQuestion.trim()) {
-      showNotification(t('enter_poll_question'), 'warning');
+      showNotification('Введите вопрос опроса', 'warning');
       return;
     }
     if (pollOptions.some(option => !option.trim())) {
-      showNotification(t('all_poll_options_must_be_filled'), 'warning');
+      showNotification('Все варианты опроса должны быть заполнены', 'warning');
       return;
     }
     setIsPollModalOpen(false);
     setAnchorEl(null);
-  };
-
-  const handleClosePollModal = () => {
-    setIsPollModalOpen(false);
-    setPollQuestion('');
-    setPollOptions(['', '']);
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -155,12 +148,6 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handlePollOptionChange = (index: number, value: string) => {
-    const newOptions = [...pollOptions];
-    newOptions[index] = value;
-    setPollOptions(newOptions);
   };
 
   return (
@@ -178,14 +165,19 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
       <TextField
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="What's on your mind?"
+        placeholder="Что у вас нового?"
         disabled={isSubmitting}
         multiline
         rows={3}
         fullWidth
         variant="outlined"
         InputProps={{
-          sx: { color: 'white' },
+          sx: { 
+            color: 'white',
+            '& .MuiInputBase-input': {
+              color: 'white'
+            }
+          },
         }}
         sx={{
           textarea: { color: 'white' },
@@ -197,6 +189,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
           },
           '.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: 'white',
+          },
+          '& .MuiInputLabel-root': {
+            color: 'rgba(255, 255, 255, 0.7)',
+          },
+          '& .MuiInputLabel-root.Mui-focused': {
+            color: 'white',
           },
         }}
       />
@@ -231,107 +229,88 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
         </Box>
       )}
 
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button
-          component="label"
-          startIcon={<FileIcon sx={{ color: 'white' }} />}
-          disabled={isSubmitting}
-          sx={{ color: 'white' }}
-        >
-          {'Attach files'}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+        <Box>
           <input
             type="file"
-            hidden
             multiple
+            hidden
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
           />
-        </Button>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={createPostMutation.isPending || (!content.trim() && files.length === 0 && !pollQuestion.trim())}
-            sx={{
-              bgcolor: 'white',
-              color: '#15202b',
-              '&:hover': {
-                 bgcolor: '#f0f0f0',
-              }
-            }}
+          <IconButton color="primary" onClick={handleFileSelect} sx={{ color: 'white' }}>
+            <AddPhotoAlternate />
+          </IconButton>
+          <IconButton color="primary" onClick={handleMenuOpen} sx={{ color: 'white' }}>
+            <MoreVert />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
           >
-            {createPostMutation.isPending ? t('posting') : t('post')}
-          </Button>
-
-          <Box sx={{ ml: 'auto' }}>
-            <input
-              type="file"
-              multiple
-              hidden
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            />
-            <IconButton color="primary" onClick={handleFileSelect}>
-              <AddPhotoAlternate />
-            </IconButton>
-            <IconButton color="primary" onClick={handleMenuOpen}>
-              <MoreVert />
-            </IconButton>
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={() => { setIsPollModalOpen(true); handleMenuClose(); }}>
-                <Poll sx={{ mr: 1 }} />
-                {t('add_poll')}
-              </MenuItem>
-            </Menu>
-          </Box>
+            <MenuItem onClick={() => { setIsPollModalOpen(true); handleMenuClose(); }}>
+              <Poll sx={{ mr: 1 }} />
+              Добавить опрос
+            </MenuItem>
+          </Menu>
         </Box>
+
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={createPostMutation.isPending || (!content.trim() && files.length === 0 && !pollQuestion.trim())}
+          sx={{
+            bgcolor: 'white',
+            color: '#15202b',
+            '&:hover': {
+              bgcolor: '#f0f0f0',
+            }
+          }}
+        >
+          {createPostMutation.isPending ? 'Публикация...' : 'Опубликовать'}
+        </Button>
       </Box>
 
-      <Dialog open={isPollModalOpen} onClose={handleClosePollModal}>
-        <DialogTitle>{t('create_poll')}</DialogTitle>
+      <Dialog open={isPollModalOpen} onClose={() => setIsPollModalOpen(false)}>
+        <DialogTitle>Создать опрос</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
-            margin="dense"
-            label={t('poll_question')}
-            type="text"
             fullWidth
-            variant="standard"
+            label="Вопрос"
             value={pollQuestion}
             onChange={(e) => setPollQuestion(e.target.value)}
+            margin="normal"
           />
           {pollOptions.map((option, index) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box key={index} sx={{ display: 'flex', gap: 1, mt: 1 }}>
               <TextField
-                margin="dense"
-                label={`${t('poll_option')} ${index + 1}`}
-                type="text"
                 fullWidth
-                variant="standard"
+                label={`Вариант ${index + 1}`}
                 value={option}
-                onChange={(e) => handlePollOptionChange(index, e.target.value)}
+                onChange={(e) => {
+                  const newOptions = [...pollOptions];
+                  newOptions[index] = e.target.value;
+                  setPollOptions(newOptions);
+                }}
               />
               {pollOptions.length > 2 && (
-                <IconButton onClick={() => handleRemovePollOption(index)} size="small">
+                <IconButton onClick={() => handleRemovePollOption(index)}>
                   <CloseIcon />
                 </IconButton>
               )}
             </Box>
           ))}
-          <Button onClick={handleAddPollOption} sx={{ mt: 2 }}>
-            {t('add_option')}
+          <Button onClick={handleAddPollOption} sx={{ mt: 1 }}>
+            Добавить вариант
           </Button>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClosePollModal}>{t('cancel')}</Button>
-          <Button onClick={handleSavePoll}>{t('save')}</Button>
+          <Button onClick={() => setIsPollModalOpen(false)}>Отмена</Button>
+          <Button onClick={handleAddPoll} variant="contained">
+            Добавить опрос
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

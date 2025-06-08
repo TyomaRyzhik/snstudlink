@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChatBubbleOutline as CommentIcon,
-  Repeat as RetweetIcon,
-  Share as ShareIcon,
   Delete as DeleteIcon,
-  Image as ImageIcon,
   PictureAsPdf as PdfIcon,
   Description as DocIcon,
   TableChart as ExcelIcon,
@@ -22,53 +19,12 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import Modal from '../Modal';
 import Textarea from '../Textarea';
 import Button from '../Button';
+import { Post as PostType, Comment as CommentType } from '../../types';
 
-interface PostProps {
-  id: string;
-  content: string;
-  media?: Array<{
-    id: string;
-    type: string;
-    path: string;
-    createdAt: string;
-  }>;
-  author: {
-    id: string;
-    nickname: string;
-    avatar?: string | null;
-  };
-  likes?: string[];
-  commentsCount?: number;
-  retweetsCount?: number;
-  createdAt: string;
-  isRetweeted?: boolean;
-  isLiked?: boolean;
+interface PostProps extends PostType {
   onLike?: () => void;
-  onComment?: () => void;
-  onRetweet?: () => void;
+  onComment?: (newCommentsCount: number) => void;
   onDelete?: () => void;
-  poll?: {
-    question: string;
-    options: {
-      text: string;
-      votes: number;
-      voterIds?: string[];
-    }[];
-    votes?: string[];
-  } | null;
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  author: {
-    id: string;
-    nickname: string;
-    avatar?: string;
-  };
-  createdAt: string;
-  likesCount: number;
-  isLiked?: boolean;
 }
 
 const Post: React.FC<PostProps> = ({
@@ -76,22 +32,17 @@ const Post: React.FC<PostProps> = ({
   content,
   media = [],
   author,
-  likes = [],
   commentsCount = 0,
-  retweetsCount = 0,
   createdAt,
-  isRetweeted: initialIsRetweeted = false,
-  isLiked: initialIsLiked = false,
+  isLiked,
   onLike,
   onComment,
-  onRetweet,
   onDelete,
   poll = null,
+  likesCount,
 }) => {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(initialIsLiked);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isRetweeted, setIsRetweeted] = useState(initialIsRetweeted);
+  const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -113,48 +64,9 @@ const Post: React.FC<PostProps> = ({
     }
   }, [isCommentModalOpen, id]);
 
-  useEffect(() => {
-    if (poll && user) {
-      const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
-      const results = poll.options.map(option => ({
-        ...option,
-        percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0
-      }));
-      setPollResults(results);
-
-      let userVotedForOption = false;
-      let votedOptionIndex: number | null = null;
-
-      for (let i = 0; i < poll.options.length; i++) {
-        const option = poll.options[i];
-        if (option.voterIds?.includes(user.id)) {
-          userVotedForOption = true;
-          votedOptionIndex = i;
-          break;
-        }
-      }
-
-      setHasVoted(userVotedForOption);
-      setSelectedPollOption(votedOptionIndex);
-    } else if (poll) {
-      const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
-      const results = poll.options.map(option => ({
-        ...option,
-        percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0
-      }));
-      setPollResults(results);
-      setHasVoted(false);
-      setSelectedPollOption(null);
-    } else {
-      setPollResults([]);
-      setHasVoted(false);
-      setSelectedPollOption(null);
-    }
-  }, [poll, user]);
-
   const handleLike = async () => {
     if (!user) {
-      showNotification('Please log in to like posts', 'error');
+      showNotification('Необходимо войти в систему', 'warning');
       return;
     }
 
@@ -164,88 +76,53 @@ const Post: React.FC<PostProps> = ({
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
         },
+        cache: 'no-store',
       });
 
       if (!response.ok) {
         throw new Error('Failed to like post');
       }
 
-      setIsLiked(!isLiked);
-      onLike?.();
-      showNotification(isLiked ? 'Лайк убран' : 'Лайк добавлен', 'success');
-    } catch (err) {
-      showNotification('Failed to like post', 'error');
+      onLike?.(); // Let the parent component handle the state update based on the server response
+    } catch (error) {
+      console.error('[Post] handleLike error:', error);
+      showNotification('Ошибка при лайке публикации', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRetweet = async () => {
+  const handleComment = async () => { // Corrected signature
     if (!user) {
-      showNotification('Пожалуйста, войдите в систему', 'error');
+      showNotification('Необходимо войти в систему', 'warning');
       return;
     }
 
-    if (isRetweeted) {
-      showNotification('Публикация уже репостнута', 'info');
+    if (!commentText.trim()) {
+      showNotification('Комментарий не может быть пустым', 'warning');
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/posts/${id}/retweet`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to repost');
-      }
-
-      setIsRetweeted(true);
-      showNotification('Публикация успешно репостнута', 'success');
-      onRetweet?.();
-    } catch (error) {
-      showNotification('Ошибка при репосте публикации', 'error');
-    }
-  };
-
-  const handleComment = () => {
-    setIsCommentModalOpen(true);
-  };
-
-  const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    setIsCommentSubmitting(true);
-    try {
+      setIsCommentSubmitting(true);
       const response = await fetch(`${API_URL}/api/posts/${id}/comments`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ content: commentText }),
       });
-      if (!response.ok) throw new Error('Failed to add comment');
-      
+
+      if (!response.ok) {
+        throw new Error('Failed to add comment');
+      }
+
+      const newComment = await response.json();
+      setComments(prevComments => [...prevComments, newComment]);
       setCommentText('');
-      
-      const commentsRes = await fetch(`${API_URL}/api/posts/${id}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const commentsData = await commentsRes.json();
-      setComments(commentsData);
-      
-      onComment?.();
-      
-      setIsCommentModalOpen(false);
-      showNotification('Комментарий успешно добавлен', 'success');
+      onComment?.(newComment.commentsCount); // Use newComment.commentsCount
     } catch (error) {
       showNotification('Ошибка при добавлении комментария', 'error');
     } finally {
@@ -253,51 +130,11 @@ const Post: React.FC<PostProps> = ({
     }
   };
 
-  const handleLikeComment = async (commentId: string) => {
-    if (!user) {
-      showNotification('Пожалуйста, войдите в систему', 'error');
-      return;
-    }
-    
-    try {
-      const response = await fetch(`${API_URL}/api/posts/comments/${commentId}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Failed to like comment');
-      
-      const data = await response.json();
-      setComments((prev) => prev.map((c) => 
-        c.id === commentId 
-          ? { ...c, likesCount: data.likesCount, isLiked: !c.isLiked } 
-          : c
-      ));
-      
-      showNotification(data.message || 'Лайк обновлен', 'success');
-    } catch (error) {
-      showNotification('Ошибка при лайке комментария', 'error');
-    }
-  };
-
   const handleDelete = async () => {
-    if (!user) {
-      showNotification('Пожалуйста, войдите в систему', 'error');
-      return;
-    }
-
-    if (user.id !== author.id) {
-      showNotification('Вы можете удалять только свои публикации', 'error');
-      return;
-    }
-
-    if (!window.confirm('Вы уверены, что хотите удалить эту публикацию?')) {
-      return;
-    }
+    if (!user || user.id !== author.id) return;
 
     try {
+      setIsLoading(true);
       const response = await fetch(`${API_URL}/api/posts/${id}`, {
         method: 'DELETE',
         headers: {
@@ -309,23 +146,23 @@ const Post: React.FC<PostProps> = ({
         throw new Error('Failed to delete post');
       }
 
-      showNotification('Публикация успешно удалена', 'success');
       onDelete?.();
+      showNotification('Публикация успешно удалена', 'success');
     } catch (error) {
       showNotification('Ошибка при удалении публикации', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleVote = async (optionIndex: number) => {
     if (!user) {
-      showNotification('Please log in to vote', 'error');
+      showNotification('Необходимо войти в систему', 'warning');
       return;
     }
 
-    const hasVotedCheck = pollResults.some(option => option.voterIds?.includes(user.id));
-
-    if (hasVotedCheck) {
-      showNotification('You have already voted.', 'info');
+    if (hasVoted) {
+      showNotification('Вы уже проголосовали в этом опросе', 'warning');
       return;
     }
 
@@ -333,143 +170,88 @@ const Post: React.FC<PostProps> = ({
       const response = await fetch(`${API_URL}/api/posts/${id}/poll/vote`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ optionIndex }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to vote');
+        throw new Error('Failed to vote');
       }
 
-      const data = await response.json();
+      setHasVoted(true);
+      setSelectedPollOption(optionIndex);
       
-      if (data.poll) {
-        let votedOptionIndex: number | null = null;
-        for (let i = 0; i < data.poll.options.length; i++) {
-          const option = data.poll.options[i];
-          if (option.voterIds?.includes(user.id)) {
-            votedOptionIndex = i;
-            break;
-          }
-        }
-        setHasVoted(votedOptionIndex !== null);
-        setSelectedPollOption(votedOptionIndex);
-        
-        const totalVotes = data.poll.options.reduce((sum: number, option: { votes: number }) => sum + option.votes, 0);
-        const updatedOptions = data.poll.options.map((option: { text: string; votes: number; voterIds?: string[] }) => ({
-          ...option,
-          percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
-        }));
-        setPollResults(updatedOptions);
-      }
-
-      showNotification(data.message, 'success');
+      // Обновляем результаты опроса
+      const updatedPoll = await response.json();
+      const totalVotes = updatedPoll.options.reduce((sum: number, option: any) => sum + option.votes, 0);
+      const results = updatedPoll.options.map((option: any) => ({
+        text: option.text,
+        votes: option.votes,
+        percentage: totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0,
+        voterIds: option.voterIds,
+      }));
+      setPollResults(results);
     } catch (error) {
-      console.error('Vote error:', error);
-      showNotification((error as Error).message, 'error');
-    }
-  };
-
-  const handleCancelVote = async () => {
-    if (!user) {
-      showNotification('Please log in to cancel vote', 'error');
-      return;
-    }
-
-    const hasVotedCheck = pollResults.some(option => option.voterIds?.includes(user.id));
-    
-    if (!hasVotedCheck) {
-      showNotification('You have not voted in this poll.', 'info');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/api/posts/${id}/poll/cancel-vote`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to cancel vote');
-      }
-
-      const data = await response.json();
-      
-      if (data.poll) {
-        const hasVotedAfterCancel = data.poll.options.some((option: { voterIds?: string[] }) => option.voterIds?.includes(user.id));
-        setHasVoted(hasVotedAfterCancel);
-        setSelectedPollOption(null);
-
-        const totalVotes = data.poll.options.reduce((sum: number, option: { votes: number }) => sum + option.votes, 0);
-        const updatedOptions = data.poll.options.map((option: { text: string; votes: number; voterIds?: string[] }) => ({
-          ...option,
-          percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
-        }));
-        setPollResults(updatedOptions);
-      }
-
-      showNotification(data.message, 'success');
-    } catch (error) {
-      console.error('Cancel vote error:', error);
-      showNotification((error as Error).message, 'error');
+      showNotification('Ошибка при голосовании', 'error');
     }
   };
 
   const renderMedia = (mediaItem: { path: string; type: string } | string, index: number) => {
-    const [imgError, setImgError] = useState(false);
     const mediaPath = typeof mediaItem === 'string' ? mediaItem : mediaItem.path;
-    const mediaType = typeof mediaItem === 'string' ? 'file' : mediaItem.type;
-    
-    const ext = mediaPath.split('.').pop()?.toLowerCase() || '';
-    const isImage = mediaType === 'image' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico'].includes(ext);
-    const isPdf = ext === 'pdf';
-    const isDoc = ['doc', 'docx'].includes(ext);
-    const isExcel = ['xls', 'xlsx'].includes(ext);
+    const mediaType = typeof mediaItem === 'string' ? 'image' : mediaItem.type;
     const fileName = mediaPath.split('/').pop() || mediaPath;
 
-    const handleDownload = () => {
-      const downloadUrl = `${API_URL}/api/posts/download/${fileName}`;
-      window.open(downloadUrl, '_blank');
+    const getFileIcon = (type: string) => {
+      switch (type) {
+        case 'application/pdf':
+          return PdfIcon;
+        case 'application/msword':
+        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+          return DocIcon;
+        case 'application/vnd.ms-excel':
+        case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+          return ExcelIcon;
+        default:
+          return FileIcon;
+      }
     };
 
-    if (isImage) {
-      const imageUrl = `${API_URL}${mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`}`;
+    const handleDownload = () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showNotification('Необходимо войти в систему для скачивания файлов', 'warning');
+        return;
+      }
+
+      const downloadUrl = `${API_URL}${mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`}?token=${token}`;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
+
+    if (mediaType.startsWith('image')) {
       return (
         <div key={index} className={styles.mediaItem}>
-          {!imgError ? (
-            <img
-              src={imageUrl}
-              alt={`Media ${index + 1}`}
-              style={{ cursor: 'pointer' }}
-              onClick={handleDownload}
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className={styles.placeholder}>
-              <ImageIcon style={{ fontSize: 48, color: '#555' }} />
-              <span className={styles.fileName} style={{ color: '#aaa', marginTop: 8 }}>{fileName}</span>
-            </div>
-          )}
-          <button onClick={handleDownload} className={styles.downloadButton}>
-            <DownloadIcon />
-          </button>
+          <img src={`${API_URL}${mediaPath}`} alt="post media" />
         </div>
       );
-    } else if (isPdf || isDoc || isExcel) {
-      let Icon = FileIcon;
-      if (isPdf) Icon = PdfIcon;
-      else if (isDoc) Icon = DocIcon;
-      else if (isExcel) Icon = ExcelIcon;
+    } else if (mediaType.startsWith('video')) {
+      return (
+        <div key={index} className={styles.mediaItem}>
+          <video controls src={`${API_URL}${mediaPath}`} />
+        </div>
+      );
+    } else if (mediaType.startsWith('application')) {
+      const IconComponent = getFileIcon(mediaType);
       return (
         <div key={index} className={styles.filePreview}>
           <div className={styles.fileIcon}>
-            <Icon />
+            <IconComponent />
           </div>
           <span className={styles.fileName}>{fileName}</span>
           <button onClick={handleDownload} className={styles.downloadButton}>
@@ -533,55 +315,42 @@ const Post: React.FC<PostProps> = ({
               {media.map((mediaItem, index) => renderMedia(mediaItem, index))}
             </div>
           )}
-
           {poll && (
             <div className={styles.pollContainer}>
-              <h4 className={styles.pollQuestion} style={{ color: 'white' }}>{poll.question}</h4>
-              <ul className={styles.pollOptions}>
-                {pollResults.map((option, index) => (
-                  <li key={index} className={styles.pollOption}>
-                    <button
-                      className={`${styles.pollOptionButton} ${
-                        selectedPollOption === index ? styles.selected : ''
-                      }`}
-                      onClick={() => handleVote(index)}
-                      disabled={hasVoted && selectedPollOption !== null}
+              <h4>{poll.question}</h4>
+              <div className={styles.pollOptions}>
+                {poll.options.map((option, index) => {
+                  const isSelected = selectedPollOption === index;
+                  const result = pollResults[index];
+                  const percentage = result ? result.percentage : 0;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`${styles.pollOption} ${isSelected ? styles.selected : ''}`}
+                      onClick={() => !hasVoted && handleVote(index)}
                     >
-                      <div className={styles.pollOptionContent}>
-                        <span className={styles.pollOptionText}>{option.text}</span>
-                        {hasVoted && (
-                          <span className={styles.pollPercentage}>
-                            {option.percentage}%
-                          </span>
-                        )}
-                      </div>
+                      <div className={styles.pollOptionText}>{option.text}</div>
                       {hasVoted && (
-                        <div 
-                          className={styles.pollProgressBar}
-                          style={{ width: `${option.percentage}%` }}
-                        />
+                        <div className={styles.pollResults}>
+                          <div
+                            className={styles.pollBar}
+                            style={{ width: `${percentage}%` }}
+                          />
+                          <span className={styles.pollPercentage}>
+                            {percentage.toFixed(1)}%
+                          </span>
+                          <span className={styles.pollVotes}>
+                            {option.votes} голосов
+                          </span>
+                        </div>
                       )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {hasVoted && selectedPollOption !== null && (
-                <div className={styles.pollActions}>
-                  <div className={styles.pollVotesCount}>
-                    Всего голосов: {pollResults.reduce((sum, option) => sum + option.votes, 0)}
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleCancelVote}
-                    style={{ color: '#f44336' }}
-                  >
-                    Отменить голос
-                  </Button>
-                </div>
-              )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
-
           <div className={styles.postActions}>
             <button
               className={`${styles.actionButton} ${isLiked ? styles.liked : ''}`}
@@ -589,21 +358,14 @@ const Post: React.FC<PostProps> = ({
               disabled={isLoading}
             >
               <ThumbUpIcon />
-              <span>{likes.length}</span>
-            </button>
-            <button className={styles.actionButton} onClick={handleComment}>
-              <CommentIcon />
-              <span>{commentsCount}</span>
+              <span>{likesCount || 0}</span>
             </button>
             <button
-              className={`${styles.actionButton} ${isRetweeted ? styles.retweeted : ''}`}
-              onClick={handleRetweet}
+              className={styles.actionButton}
+              onClick={() => setIsCommentModalOpen(true)}
             >
-              <RetweetIcon />
-              <span>{retweetsCount}</span>
-            </button>
-            <button className={styles.actionButton}>
-              <ShareIcon />
+              <CommentIcon />
+              <span>{commentsCount}</span>
             </button>
           </div>
         </div>
@@ -615,40 +377,71 @@ const Post: React.FC<PostProps> = ({
         title="Комментарии"
       >
         <div className={styles.commentsContainer}>
-          {comments.map((comment) => (
-            <div key={comment.id} className={styles.comment}>
-              <div className={styles.commentHeader}>
-                <Link to={`/profile/${comment.author.id}`} className={styles.commentAuthor}>
-                  {comment.author.nickname}
-                </Link>
-                <span className={styles.commentTime}>
-                  {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ru })}
-                </span>
+          {comments.map((comment: any) => {
+            if (!comment.sender || !comment.sender.id) {
+              return (
+                <div key={comment.id} className={styles.comment}>
+                  <div className={styles.commentHeader}>
+                    <span className={styles.commentAuthor} style={{ color: '#aaa' }}>
+                      Неизвестный пользователь
+                    </span>
+                    <span className={styles.commentTime}>
+                      {((() => {
+                        const date = new Date(comment.createdAt);
+                        if (!comment.createdAt || isNaN(date.getTime())) {
+                          return 'Нет даты';
+                        }
+                        try {
+                          return formatDistanceToNow(date, { addSuffix: true, locale: ru });
+                        } catch (error) {
+                          return 'Нет даты';
+                        }
+                      })())}
+                    </span>
+                  </div>
+                  <div className={styles.commentContent}>{comment.content}</div>
+                </div>
+              );
+            }
+            return (
+              <div key={comment.id} className={styles.comment}>
+                <div className={styles.commentHeader}>
+                  <Link to={`/profile/${comment.sender.id}`} className={styles.commentAuthor}>
+                    {comment.sender.nickname}
+                  </Link>
+                  <span className={styles.commentTime}>
+                    {((() => {
+                      const date = new Date(comment.createdAt);
+                      if (!comment.createdAt || isNaN(date.getTime())) {
+                        return 'Нет даты';
+                      }
+                      try {
+                        return formatDistanceToNow(date, { addSuffix: true, locale: ru });
+                      } catch (error) {
+                        return 'Нет даты';
+                      }
+                    })())}
+                  </span>
+                </div>
+                <div className={styles.commentContent}>{comment.content}</div>
               </div>
-              <div className={styles.commentContent}>{comment.content}</div>
-              <div className={styles.commentActions}>
-                <button
-                  className={`${styles.actionButton} ${comment.isLiked ? styles.liked : ''}`}
-                  onClick={() => handleLikeComment(comment.id)}
-                >
-                  <ThumbUpIcon />
-                  <span>{comment.likesCount}</span>
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
+          <div className={styles.addComment}>
+            <Textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Написать комментарий..."
+              disabled={isCommentSubmitting}
+            />
+            <Button
+              onClick={handleComment}
+              disabled={isCommentSubmitting || !commentText.trim()}
+            >
+              {isCommentSubmitting ? 'Отправка...' : 'Отправить'}
+            </Button>
+          </div>
         </div>
-        <form onSubmit={handleCommentSubmit} className={styles.commentForm}>
-          <Textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Написать комментарий..."
-            disabled={isCommentSubmitting}
-          />
-          <Button type="submit" disabled={isCommentSubmitting || !commentText.trim()}>
-            Отправить
-          </Button>
-        </form>
       </Modal>
     </article>
   );

@@ -7,6 +7,7 @@ import Post from '../../components/Post'
 import { API_URL } from '../../config'
 import { Box, Typography, CircularProgress } from '@mui/material'
 import { Post as PostType } from '../../types'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface Post {
   id: string
@@ -25,17 +26,21 @@ interface Post {
   likes?: string[];
   likesCount?: number
   commentsCount?: number
-  retweetsCount?: number
   createdAt: string
   updatedAt?: string
   isLiked?: boolean
-  isRetweeted?: boolean
+  onLike?: () => void;
+  onComment?: (newCommentsCount: number) => void;
+  onDelete?: () => void;
   poll?: { question: string; options: { text: string; votes: number }[] } | null
+  retweetsCount?: number
+  isRetweeted?: boolean
 }
 
 const Home = () => {
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const { data: posts, isLoading, error } = useQuery<PostType[]>({
     queryKey: ['posts'],
@@ -54,17 +59,22 @@ const Home = () => {
         throw new Error('Failed to fetch posts')
       }
       const data = await response.json();
-      // Преобразуем все поля в camelCase
+      // Преобразуем все поля в camelCase и добавляем isLiked
       function toCamelCase(obj: any): any {
         if (Array.isArray(obj)) {
           return obj.map(v => toCamelCase(v));
         } else if (obj !== null && typeof obj === 'object') {
-          return Object.fromEntries(
+          const newObj = Object.fromEntries(
             Object.entries(obj).map(([k, v]) => [
               k.replace(/_([a-z])/g, g => g[1].toUpperCase()),
               toCamelCase(v)
             ])
           );
+          // Check if it's a post object and add isLiked property
+          if (newObj.id && newObj.likes && Array.isArray(newObj.likes) && user?.id) {
+            newObj.isLiked = newObj.likes.includes(user.id);
+          }
+          return newObj;
         }
         return obj;
       }
@@ -81,31 +91,44 @@ const Home = () => {
         },
       })
       if (!response.ok) throw new Error('Failed to like post')
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+      const data = await response.json(); // Get the response data (includes new likesCount)
+      console.log(`[Home] handleLikePost: Server response data for postId ${postId}:`, data);
+      
+      // Update the posts cache with the new like state
+      queryClient.setQueryData(['posts'], (oldPosts: PostType[] | undefined) => {
+        if (!oldPosts) return oldPosts;
+        
+        console.log(`[Home] handleLikePost: oldPosts for postId ${postId}:`, oldPosts.find(p => p.id === postId));
+        
+        const updatedPosts = oldPosts.map(post => {
+          if (post.id === postId) {
+            return { 
+              ...post, 
+              likesCount: data.likesCount, 
+              isLiked: data.hasLiked // Use hasLiked from server response
+            };
+          }
+          return post;
+        });
+        
+        console.log(`[Home] handleLikePost: updatedPosts for postId ${postId}:`, updatedPosts.find(p => p.id === postId));
+        return updatedPosts;
+      });
     } catch (error) {
+      console.error('[Home] handleLikePost error:', error);
       showNotification('Error liking post', 'error')
     }
   }
 
-  const handleCommentPost = () => {
-    // Открытие модального окна для комментариев происходит в компоненте Post
-    queryClient.invalidateQueries({ queryKey: ['posts'] })
-  }
-
-  const handleRetweetPost = async (postId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/api/posts/${postId}/retweet`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-      if (!response.ok) throw new Error('Failed to retweet post')
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      showNotification('Post retweeted successfully', 'success')
-    } catch (error) {
-      showNotification('Error retweeting post', 'error')
-    }
+  const handleCommentPost = async (commentedPostId: string, newCommentsCount: number) => {
+    queryClient.setQueryData(['posts'], (oldPosts: PostType[] | undefined) => {
+      return oldPosts?.map(post => {
+        if (post.id === commentedPostId) {
+          return { ...post, commentsCount: newCommentsCount };
+        }
+        return post;
+      });
+    });
   }
 
   const handleDeletePost = async (postId: string) => {
@@ -156,17 +179,17 @@ const Home = () => {
     <PageLayout title={'Home'}>
       <CreatePost onPostCreated={() => queryClient.invalidateQueries({ queryKey: ['posts'] })} />
       {posts?.map((post) => {
-        console.log('Processing post:', JSON.stringify(post, null, 2))
+        console.log('Post data in Home before rendering Post component:', post.id, 'likes:', post.likesCount, 'isLiked:', post.isLiked, 'comments:', post.commentsCount);
         if (!post.author || typeof post.author !== 'object') {
-          console.log('Post skipped: invalid author object')
+          // console.log('Post skipped: invalid author object')
           return null
         }
         if (!post.author.id) {
-          console.log('Post skipped: missing author id')
+          // console.log('Post skipped: missing author id')
           return null
         }
         if (!post.author.nickname) {
-          console.log('Post skipped: missing author nickname')
+          // console.log('Post skipped: missing author nickname')
           return null
         }
         return (
@@ -178,12 +201,15 @@ const Home = () => {
             createdAt={post.createdAt}
             likes={post.likes}
             commentsCount={post.commentsCount}
-            retweetsCount={post.retweetsCount}
             media={post.media}
             poll={post.poll}
+            isLiked={post.isLiked}
+            likesCount={post.likesCount}
+            retweetsCount={post.retweetsCount}
+            updatedAt={post.updatedAt}
+            isRetweeted={post.isRetweeted}
             onLike={() => handleLikePost(post.id)}
-            onRetweet={() => handleRetweetPost(post.id)}
-            onComment={() => handleCommentPost()}
+            onComment={(newCommentsCount) => handleCommentPost(post.id, newCommentsCount)}
             onDelete={() => handleDeletePost(post.id)}
           />
         )

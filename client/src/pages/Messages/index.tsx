@@ -1,297 +1,327 @@
-import PageLayout from '../../components/PageLayout'
-import { Box, Typography, List, ListItem, ListItemText, Avatar, Divider, TextField, IconButton, CircularProgress } from '@mui/material'
-import SendIcon from '@mui/icons-material/Send'
-import { useState, useEffect, useRef } from 'react'
-import { API_URL } from '../../config'
-import { useTranslation } from 'react-i18next'
-
-interface Participant {
-  id: string
-  nickname: string
-  avatar: string
-}
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Typography, List, ListItem, Avatar, TextField, IconButton, CircularProgress } from '@mui/material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_URL } from '../../config';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import SendIcon from '@mui/icons-material/Send';
+import PageLayout from '../../components/PageLayout';
+import { useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 
 interface Message {
-  id: string
-  content: string
-  createdAt: string
-  sender: Participant
+  id: string;
+  content: string;
+  createdAt: string;
+  sender: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
 }
 
 interface Conversation {
-  id: string
-  participants: Participant[]
-  lastMessage: Message | null
-  createdAt: string
-  updatedAt: string
+  id: string;
+  participant: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
+  lastMessage?: Message;
+  unreadCount: number;
 }
 
 const Messages = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [loadingConversations, setLoadingConversations] = useState(true)
-  const [loadingMessages, setLoadingMessages] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const { t } = useTranslation()
+  const { userId } = useParams<{ userId: string }>();
+  const { user: currentUser } = useAuth();
+  const { showNotification } = useNotification();
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  // Ref for message area to enable scrolling
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // TODO: Get actual current user ID
-  const currentUserId = localStorage.getItem('userId') || '' // Replace with actual logic
-
-  // Fetch conversations
-  useEffect(() => {
-    const fetchConversations = async () => {
-      setLoadingConversations(true)
-      setError(null)
+  const { data: conversations, isLoading: isLoadingConversations, error: conversationsError } = useQuery<Conversation[]>({
+    queryKey: ['conversations'],
+    queryFn: async () => {
       try {
-        const response = await fetch(`${API_URL}/api/messages`, {
+        const response = await fetch(`${API_URL}/api/conversations`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
-        })
-        if (!response.ok) {
-          throw new Error(`Error fetching conversations: ${response.statusText}`)
-        }
-        const data: Conversation[] = await response.json()
-        setConversations(data)
-      } catch (err: any) {
-        console.error('Error fetching conversations:', err)
-        setError(err.message)
-      } finally {
-        setLoadingConversations(false)
-      }
-    }
-
-    fetchConversations()
-  }, [])
-
-  // Fetch messages for selected conversation
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!selectedConversation) return
-
-      setLoadingMessages(true)
-      setError(null)
-      try {
-        const response = await fetch(`${API_URL}/api/messages/${selectedConversation.id}/messages`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        })
-        if (!response.ok) {
-          throw new Error(`Error fetching messages: ${response.statusText}`)
-        }
-        const data: Message[] = await response.json()
-        setMessages(data)
-      } catch (err: any) {
-        console.error('Error fetching messages:', err)
-        setError(err.message)
-      } finally {
-        setLoadingMessages(false)
-      }
-    }
-
-    fetchMessages()
-  }, [selectedConversation]) // Refetch messages when selectedConversation changes
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const handleConversationSelect = (conversation: Conversation) => {
-    setSelectedConversation(conversation)
-  }
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return
-
-    // Optimistically add message (optional but improves UX)
-    const tempMessage: Message = {
-        id: Date.now().toString(), // Temp ID
-        content: newMessage,
-        createdAt: new Date().toISOString(),
-        sender: { // Placeholder for current user's info
-            id: currentUserId, // Use actual user ID
-            nickname: 'You', // TODO: Replace with actual nickname
-            avatar: '', // TODO: Replace with actual avatar
-        }
-    };
-    setMessages([...messages, tempMessage]);
-    setNewMessage(''); // Clear input immediately
-
-    try {
-        const response = await fetch(`${API_URL}/api/messages/${selectedConversation.id}/messages`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-            body: JSON.stringify({ content: newMessage }),
         });
-
         if (!response.ok) {
-            throw new Error(`Error sending message: ${response.statusText}`);
-            // TODO: Handle error: maybe revert optimistic update or show error message
+          throw new Error('Failed to fetch conversations');
         }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        throw error;
+      }
+    },
+    retry: 1,
+  });
 
-        // Assuming server returns the saved message with correct ID and timestamp
-        const sentMessage: Message = await response.json();
-        // Replace temp message or just add if no optimistic update
-        setMessages(messages.map(msg => msg.id === tempMessage.id ? sentMessage : msg));
+  const { isLoading: isLoadingMessages, error: messagesError } = useQuery<Message[]>({
+    queryKey: ['messages', selectedConversation],
+    queryFn: async () => {
+      if (!selectedConversation) return [];
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${selectedConversation}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch messages');
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        throw error;
+      }
+    },
+    enabled: !!selectedConversation,
+    retry: 1,
+  });
 
-    } catch (err: any) {
-        console.error('Error sending message:', err);
-        setError(err.message);
-        // TODO: Show error to user
-        setMessages(messages.filter(msg => msg.id !== tempMessage.id)); // Remove optimistic update on error
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!selectedConversation) throw new Error('No conversation selected');
+      const response = await fetch(`${API_URL}/api/conversations/${selectedConversation}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversation] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      setMessage('');
+    },
+    onError: (error) => {
+      console.error('Error sending message:', error);
+    },
+  });
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (message.trim() && selectedConversation) {
+      sendMessageMutation.mutate(message.trim());
     }
   };
 
-  // Helper to get conversation name (e.g., participants' nicknames)
-  const getConversationName = (conversation: Conversation) => {
-      // Exclude current user from participant list for display
-      const otherParticipants = conversation.participants.filter(p => p.id !== currentUserId); // Use actual user ID check
-      if (otherParticipants.length === 0) return t('self_chat'); // Case with only one participant (shouldn't happen in typical messenger)
-      if (otherParticipants.length === 1) return otherParticipants[0].nickname;
-      return otherParticipants.map(p => p.nickname).join(', '); // For group chats
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-    // Helper to get conversation avatar
-    const getConversationAvatar = (conversation: Conversation) => {
-        // For a direct message, show the other participant's avatar
-        const otherParticipant = conversation.participants.find(p => p.id !== currentUserId);
-        if (otherParticipant) return `${API_URL}${otherParticipant.avatar}`;
-        
-        // For a group chat, you might show a default group avatar or a combination
-        return undefined; // Placeholder for group avatar
-    };
+  const fetchMessages = useCallback(async () => {
+    if (!currentUser || !userId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/messages/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+      const data = await response.json();
+      setMessages(data);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      showNotification('Ошибка загрузки сообщений', 'error');
+    }
+  }, [currentUser, userId, showNotification]);
 
-  // Placeholder messages or loading indicator
-  if (loadingConversations) {
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  if (isLoadingConversations) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" sx={{ height: 'calc(100vh - 64px)' }}>
-        <CircularProgress />
-      </Box>
+      <PageLayout title="Сообщения">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+          <CircularProgress />
+        </Box>
+      </PageLayout>
     );
   }
 
-  if (error) {
+  if (conversationsError) {
     return (
-      <Box p={2}>
-        <Typography color="error">{t('error_fetching_conversations')}</Typography>
-      </Box>
+      <PageLayout title="Сообщения">
+        <Box sx={{ p: 2 }}>
+          <Typography color="error" align="center">
+            Ошибка загрузки диалогов. Пожалуйста, попробуйте позже.
+          </Typography>
+        </Box>
+      </PageLayout>
     );
   }
 
   return (
-    <PageLayout title={t('messages')}>
-      <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}> {/* Adjust height based on header */}
-
-        {/* Conversations List (Sidebar) */}
-        <Box sx={{ width: 300, borderRight: 1, borderColor: 'divider', overflowY: 'auto' }}>
-          <Typography variant="h6" sx={{ p: 2 }}>{t('conversations')}</Typography>
-          <Divider />
-          {loadingConversations ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <CircularProgress />
-              </Box>
-          ) : error ? (
-              <Typography color="error" sx={{ mt: 2, px: 2 }}>{t('error_fetching_conversations')} {error}</Typography>
-          ) : conversations.length === 0 ? (
-              <Typography color="text.secondary" sx={{ mt: 2, px: 2 }}>{t('no_conversations_yet')}</Typography>
-          ) : (
-            <List>
-              {conversations.map(conversation => (
-                <ListItem
-                  button
-                  key={conversation.id}
-                  onClick={() => handleConversationSelect(conversation)}
-                  selected={selectedConversation?.id === conversation.id}
-                >
-                  {selectedConversation && <Avatar src={getConversationAvatar(selectedConversation)} sx={{ mr: 2 }} />}
-                  <ListItemText
-                    primary={getConversationName(conversation)}
-                    secondary={conversation.lastMessage?.content || t('no_messages')}
+    <PageLayout title="Сообщения">
+      <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
+        {/* Conversations List */}
+        <Box sx={{ width: 300, borderRight: 1, borderColor: 'divider', overflow: 'auto' }}>
+          <List>
+            {conversations?.map((conversation) => (
+              <ListItem
+                key={conversation.id}
+                button
+                selected={selectedConversation === conversation.id}
+                onClick={() => setSelectedConversation(conversation.id)}
+                sx={{
+                  '&.Mui-selected': {
+                    bgcolor: 'action.selected',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Avatar
+                    src={conversation.participant.avatar ? `${API_URL}${conversation.participant.avatar}` : undefined}
+                    sx={{ mr: 2 }}
                   />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </Box>
-
-        {/* Message Area */}
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {!selectedConversation ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <Typography variant="h6" color="text.secondary">
-                {t('select_a_conversation')}
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              {/* Chat Header */}
-              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6">{getConversationName(selectedConversation)}</Typography>
-              </Box>
-
-              {/* Messages Display */}
-              <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
-                {loadingMessages ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                      <CircularProgress />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle1" noWrap>
+                      {conversation.participant.nickname}
+                    </Typography>
+                    {conversation.lastMessage && (
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {conversation.lastMessage.content}
+                      </Typography>
+                    )}
+                  </Box>
+                  {conversation.unreadCount > 0 && (
+                    <Box
+                      sx={{
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                        borderRadius: '50%',
+                        minWidth: 20,
+                        height: 20,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        ml: 1,
+                      }}
+                    >
+                      {conversation.unreadCount}
                     </Box>
-                ) : error ? (
-                    <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>{t('error_loading_messages')} {error}</Typography>
-                ) : messages.length === 0 ? (
-                    <Typography color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>{t('start_a_conversation')}</Typography>
-                ) : (
-                    messages.map(message => (
-                      <Box key={message.id} sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: message.sender.id === currentUserId ? 'flex-end' : 'flex-start' }}> {/* Use actual user ID check, adjust alignment */}
-                         {/* Display sender name if not current user */}
-                        {message.sender.id !== currentUserId && (
-                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 0.5 }}>
-                                {message.sender.nickname}
-                            </Typography>
-                        )}
-                          <Box sx={{ bgcolor: message.sender.id === currentUserId ? 'primary.main' : 'grey.700', color: 'white', p: 1, borderRadius: 1, maxWidth: '80%' }}> {/* Use actual user ID check */}
-                              <Typography variant="body2">{message.content}</Typography>
-                              <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.7)', display: 'block', textAlign: message.sender.id === currentUserId ? 'right' : 'left' }}> {/* Align time */}
-                                  {new Date(message.createdAt).toLocaleTimeString()}
-                              </Typography>
-                          </Box>
-                      </Box>
-                    ))
-                )}
-                <div ref={messagesEndRef} /> {/* Element to scroll to */}
-              </Box>
-
-              {/* Message Input */}
-              <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder={t('enter_message')}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => { if (e.key === 'Enter') handleSendMessage() }}
-                  disabled={loadingMessages}
-                />
-                <IconButton color="primary" onClick={handleSendMessage} disabled={!newMessage.trim() || loadingMessages}>
-                  <SendIcon />
-                </IconButton>
-              </Box>
-            </>
-          )}
+                  )}
+                </Box>
+              </ListItem>
+            ))}
+          </List>
         </Box>
 
+        {/* Messages Area */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {selectedConversation ? (
+            <>
+              {isLoadingMessages ? (
+                <Box display="flex" justifyContent="center" alignItems="center" flex={1}>
+                  <CircularProgress />
+                </Box>
+              ) : messagesError ? (
+                <Box sx={{ p: 2 }}>
+                  <Typography color="error" align="center">
+                    Ошибка загрузки сообщений. Пожалуйста, попробуйте позже.
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                    {messages?.map((msg) => (
+                      <Box
+                        key={msg.id}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: msg.sender.id === localStorage.getItem('userId') ? 'flex-end' : 'flex-start',
+                          mb: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            maxWidth: '70%',
+                            bgcolor: msg.sender.id === localStorage.getItem('userId') ? 'primary.main' : 'grey.100',
+                            color: msg.sender.id === localStorage.getItem('userId') ? 'primary.contrastText' : 'text.primary',
+                            p: 1.5,
+                            borderRadius: 2,
+                          }}
+                        >
+                          <Typography variant="body1">{msg.content}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            {formatDistanceToNowStrict(new Date(msg.createdAt), {
+                              addSuffix: true,
+                              locale: ru,
+                            })}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </Box>
+                  <Box
+                    component="form"
+                    onSubmit={handleSendMessage}
+                    sx={{
+                      p: 2,
+                      borderTop: 1,
+                      borderColor: 'divider',
+                      display: 'flex',
+                      gap: 1,
+                    }}
+                  >
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      placeholder="Введите сообщение..."
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      disabled={sendMessageMutation.isPending}
+                    />
+                    <IconButton
+                      color="primary"
+                      type="submit"
+                      disabled={!message.trim() || sendMessageMutation.isPending}
+                    >
+                      <SendIcon />
+                    </IconButton>
+                  </Box>
+                </>
+              )}
+            </>
+          ) : (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              flex={1}
+              sx={{ color: 'text.secondary' }}
+            >
+              <Typography variant="h6">Выберите диалог для начала общения</Typography>
+            </Box>
+          )}
+        </Box>
       </Box>
     </PageLayout>
-  )
-}
+  );
+};
 
-export default Messages 
+export default Messages; 

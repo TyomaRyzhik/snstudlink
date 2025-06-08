@@ -3,6 +3,7 @@ import { Box, Typography, CircularProgress, Divider } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '../../config';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -81,29 +82,35 @@ const RecentPostsSidebar = () => {
 
             return (
               <React.Fragment key={post.id}>
-                <Box
-                  sx={{
-                    mb: index === posts.length - 1 ? 0 : 2,
-                    pt: index === 0 ? 0 : 1,
-                    pb: 1,
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
+                <Link
+                  to={`/post/${post.id}`}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
                 >
-                  <Typography variant="body2" color="text.secondary" sx={{ color: '#8899a6', display: 'flex', alignItems: 'center', fontWeight: 'normal', mb: 0.5 }}>
-                    {post.author.nickname}
-                    {formattedDate && (
-                      <>
-                        <Box component="span" sx={{ mx: 0.5 }}>&middot;</Box>
-                        {formattedDate}
-                      </>
-                    )}
-                  </Typography>
-                  <Typography variant="body1" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', color: 'white' }}>
-                    {post.content}
-                  </Typography>
-                </Box>
+                  <Box
+                    sx={{
+                      mb: index === posts.length - 1 ? 0 : 2,
+                      pt: index === 0 ? 0 : 1,
+                      pb: 1,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#8899a6', display: 'flex', alignItems: 'center', fontWeight: 'normal', mb: 0.5 }}>
+                      {post.author.nickname}
+                      {formattedDate && (
+                        <>
+                          <Box component="span" sx={{ mx: 0.5 }}>&middot;</Box>
+                          {formattedDate}
+                        </>
+                      )}
+                    </Typography>
+                    <Typography variant="body1" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', color: 'white' }}>
+                      {post.content}
+                    </Typography>
+                  </Box>
+                </Link>
                 {index < posts.length - 1 && <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', my: 1 }} />}
               </React.Fragment>
             );

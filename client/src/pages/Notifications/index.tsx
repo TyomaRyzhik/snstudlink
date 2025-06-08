@@ -3,6 +3,7 @@ import { Box, Typography, List, ListItem, Avatar, Divider, Tabs, Tab, CircularPr
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '../../config';
 import { formatDistanceToNow } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import CommentIcon from '@mui/icons-material/Comment';
@@ -12,10 +13,9 @@ import { useTranslation } from 'react-i18next';
 
 interface Notification {
   id: string;
-  message: string;
-  createdAt: string;
-  isRead: boolean;
   type: 'mention' | 'like' | 'comment' | 'follow';
+  isRead: boolean;
+  createdAt: string;
   actor: {
     id: string;
     nickname: string;
@@ -36,28 +36,26 @@ const Notifications = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const { data: notifications, isLoading } = useQuery<Notification[]>({
+  const { data: notifications, isLoading, error } = useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const response = await fetch(`${API_URL}/api/notifications`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
+      try {
+        const response = await fetch(`${API_URL}/api/notifications`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch notifications');
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
       }
-      return response.json();
     },
+    retry: 1,
   });
-
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -89,11 +87,24 @@ const Notifications = () => {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    if (notification.post) {
-      navigate(`/post/${notification.post.id}`);
-    } else if (notification.actor) {
-      navigate(`/profile/${notification.actor.nickname}`);
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // Mark notification as read
+      await fetch(`${API_URL}/api/notifications/${notification.id}/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      // Navigate to the appropriate page
+      if (notification.post) {
+        navigate(`/post/${notification.post.id}`);
+      } else if (notification.actor) {
+        navigate(`/profile/${notification.actor.nickname}`);
+      }
+    } catch (error) {
+      console.error('Error handling notification click:', error);
     }
   };
 
@@ -103,6 +114,28 @@ const Notifications = () => {
     if (activeTab === 2) return notification.type === 'like';
     return true;
   }) ?? [];
+
+  if (isLoading) {
+    return (
+      <PageLayout title={t('notifications')}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+          <CircularProgress />
+        </Box>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout title={t('notifications')}>
+        <Box sx={{ p: 2 }}>
+          <Typography color="error" align="center">
+            {t('error_loading_notifications')}
+          </Typography>
+        </Box>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout title={t('notifications')}>
@@ -154,6 +187,7 @@ const Notifications = () => {
                     <Typography variant="caption" color="text.secondary">
                       {formatDistanceToNow(new Date(notification.createdAt), {
                         addSuffix: true,
+                        locale: ru,
                       })}
                     </Typography>
                   </Box>

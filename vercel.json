@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "installCommand": "npm run install:all",
+  "outputDirectory": "client/dist",
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "npm run build"
+      }
+    },
+    {
+      "src": "server/src/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["server/dist/**"],
+        "buildCommand": "npm run build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+} 

@@ -9,14 +9,15 @@
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "build": "npm run build:client && npm run build:server",
     "build:client": "cd client && npm run build",
-    "build:server": "cd server && npm run build"
+    "build:server": "cd server && npm run build",
+    "vercel-build": "npm run install:all && npm run build"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "@vercel/node": "^3.0.0"
   },
-  "dependencies": {
-    "i18next": "^25.2.1",
-    "i18next-browser-languagedetector": "^8.1.0",
-    "react-i18next": "^15.5.2"
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

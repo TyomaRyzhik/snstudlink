@@ -11,6 +11,14 @@ export class ReactionRepository extends Repository<Reaction> {
     ]);
   }
 
+  async findOne(postId: string, userId: string, type: ReactionType): Promise<Reaction | null> {
+    const { rows } = await this.query(
+      'SELECT * FROM reactions WHERE post_id = $1 AND user_id = $2 AND type = $3',
+      [postId, userId, type]
+    );
+    return rows[0] || null;
+  }
+
   async findByPost(postId: string): Promise<Reaction[]> {
     const { rows } = await this.query(
       `SELECT r.*, u.name as user_name 

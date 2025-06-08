@@ -25,6 +25,17 @@ export interface Post {
   } | null
 }
 
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  sender: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
+}
+
 export interface Subject {
   id: string;
   title: string;

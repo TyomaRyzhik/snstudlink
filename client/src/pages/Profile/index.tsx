@@ -139,13 +139,47 @@ const Profile = ({ isMe = false }: ProfileProps) => {
   const postsQueryKey = isMe ? ['posts', 'user', 'me'] : ['posts', 'user', id];
   const postsQueryFn = async () => {
     try {
+      const token = localStorage.getItem('token');
+      let data;
       if (isMe) {
-        const { data } = await axios.get(`${API_URL}/api/posts/user/me`);
-        return data;
+        const response = await axios.get(`${API_URL}/api/posts/user/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        data = response.data;
       } else {
-        const { data } = await axios.get(`${API_URL}/api/posts/user/${id}`);
-        return data;
+        const response = await axios.get(`${API_URL}/api/posts/user/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        data = response.data;
       }
+
+      function toCamelCase(obj: any): any {
+        if (Array.isArray(obj)) {
+          return obj.map(v => toCamelCase(v));
+        } else if (obj !== null && typeof obj === 'object') {
+          const newObj = Object.fromEntries(
+            Object.entries(obj).map(([k, v]) => [
+              k.replace(/_([a-z])/g, g => g[1].toUpperCase()),
+              toCamelCase(v)
+            ])
+          );
+          if (newObj.id && newObj.likes && Array.isArray(newObj.likes) && currentUser?.id) {
+            newObj.isLiked = newObj.likes.includes(currentUser.id);
+          }
+          // Ensure likesCount, updatedAt, isRetweeted are present even if not explicitly from server
+          newObj.likesCount = newObj.likesCount !== undefined ? newObj.likesCount : (newObj.likes ? newObj.likes.length : 0);
+          newObj.updatedAt = newObj.updatedAt !== undefined ? newObj.updatedAt : new Date().toISOString(); // Placeholder if missing
+          newObj.isRetweeted = newObj.isRetweeted !== undefined ? newObj.isRetweeted : false;
+          return newObj;
+        }
+        return obj;
+      }
+
+      return toCamelCase(data);
     } catch (error) {
       console.error('Error fetching posts:', error);
       return [];
@@ -424,6 +458,10 @@ const Profile = ({ isMe = false }: ProfileProps) => {
                     retweetsCount={post.retweetsCount}
                     media={post.media}
                     poll={post.poll}
+                    likesCount={post.likesCount}
+                    updatedAt={post.updatedAt}
+                    isLiked={post.isLiked}
+                    isRetweeted={post.isRetweeted}
                   />
                 ))}
               </Stack>

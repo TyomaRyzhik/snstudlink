@@ -61,7 +61,8 @@ export class PostRepository extends BaseRepository<Post> {
     return rows.map(row => ({
         ...row,
         author: row.author as User, // Assuming author structure matches User type
-        media: row.media as string[] // Assuming media is stored as JSONB array of strings
+        media: row.media as string[], // Assuming media is stored as JSONB array of strings
+        likesCount: row.likes_count, // Explicitly map likes_count from DB to likesCount
     })) as Post[];
   }
 
@@ -85,7 +86,8 @@ export class PostRepository extends BaseRepository<Post> {
     return {
         ...row,
         author: row.author as User, // Assuming author structure matches User type
-        media: row.media as string[] // Assuming media is stored as JSONB array of strings
+        media: row.media as string[], // Assuming media is stored as JSONB array of strings
+        likesCount: row.likes_count, // Explicitly map likes_count from DB to likesCount
     } as Post;
   }
 
@@ -109,11 +111,12 @@ export class PostRepository extends BaseRepository<Post> {
     return rows.map(row => ({
         ...row,
         author: row.author as User, // Assuming author structure matches User type
-        media: row.media as string[] // Assuming media is stored as JSONB array of strings
+        media: row.media as string[], // Assuming media is stored as JSONB array of strings
+        likesCount: row.likes_count, // Explicitly map likes_count from DB to likesCount
     })) as Post[];
   }
 
-  async toggleLike(postId: string, userId: string): Promise<void> {
+  async toggleLike(postId: string, userId: string): Promise<{ hasLiked: boolean; updatedPost: Post | null }> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -124,31 +127,63 @@ export class PostRepository extends BaseRepository<Post> {
         [postId, userId]
       );
 
+      console.log(`[PostRepository] toggleLike: existingLike check for postId ${postId}, userId ${userId}:`, existingLike);
+
       if (existingLike) {
+        console.log(`[PostRepository] toggleLike: Existing like found. Attempting to DELETE.`);
         // Remove like
         await client.query(
           'DELETE FROM post_likes WHERE post_id = $1 AND user_id = $2',
           [postId, userId]
         );
-        await client.query(
-          'UPDATE posts SET likes_count = likes_count - 1 WHERE id = $1',
+        console.log(`[PostRepository] toggleLike: Deleted like for postId ${postId}, userId ${userId}.`);
+        // Recalculate likes count after deletion
+        const { rows: [{ count: newCountAfterDelete }] } = await client.query(
+          'SELECT COUNT(*) FROM post_likes WHERE post_id = $1',
           [postId]
         );
+        console.log(`[PostRepository] toggleLike: New count after delete for postId ${postId}: ${newCountAfterDelete}`);
+        await client.query(
+          'UPDATE posts SET likes_count = $1 WHERE id = $2',
+          [parseInt(newCountAfterDelete), postId]
+        );
+        console.log(`[PostRepository] toggleLike: Posts table updated for postId ${postId} with count ${newCountAfterDelete}.`);
       } else {
+        console.log(`[PostRepository] toggleLike: No existing like found. Attempting to INSERT.`);
         // Add like
         await client.query(
           'INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)',
           [postId, userId]
         );
-        await client.query(
-          'UPDATE posts SET likes_count = likes_count + 1 WHERE id = $1',
+        console.log(`[PostRepository] toggleLike: Inserted like for postId ${postId}, userId ${userId}.`);
+        // Recalculate likes count after insertion
+        const { rows: [{ count: newCountAfterInsert }] } = await client.query(
+          'SELECT COUNT(*) FROM post_likes WHERE post_id = $1',
           [postId]
         );
+        console.log(`[PostRepository] toggleLike: New count after insert for postId ${postId}: ${newCountAfterInsert}`);
+        await client.query(
+          'UPDATE posts SET likes_count = $1 WHERE id = $2',
+          [parseInt(newCountAfterInsert), postId]
+        );
+        console.log(`[PostRepository] toggleLike: Posts table updated for postId ${postId} with count ${newCountAfterInsert}.`);
       }
 
       await client.query('COMMIT');
+      console.log(`[PostRepository] toggleLike: Transaction committed for postId ${postId}.`);
+
+      // Get the updated post with all necessary details
+      const updatedPost = await this.findWithMedia(postId);
+      console.log(`[PostRepository] toggleLike: Fetched updatedPost for postId ${postId}:`, updatedPost);
+      
+      // Return the correct like state
+      return {
+        hasLiked: !existingLike, // true if we added a like, false if we removed it
+        updatedPost
+      };
     } catch (error) {
       await client.query('ROLLBACK');
+      console.error('[PostRepository] toggleLike error:', error);
       throw error;
     } finally {
       client.release();
@@ -200,6 +235,14 @@ export class PostRepository extends BaseRepository<Post> {
   async findById(id: string): Promise<Post | null> {
     // Use findWithMedia as it provides all necessary details including author and media
     return this.findWithMedia(id);
+  }
+
+  async hasUserLikedPost(postId: string, userId: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      'SELECT * FROM post_likes WHERE post_id = $1 AND user_id = $2',
+      [postId, userId]
+    );
+    return rows.length > 0;
   }
 
   async remove(id: string): Promise<void> {
